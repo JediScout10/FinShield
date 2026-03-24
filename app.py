@@ -317,3 +317,32 @@ app.mount("/static",StaticFiles(directory="static"),name="static")
 async def home():
 
     return FileResponse("static/landing.html")
+
+
+BASE_DIR=os.path.dirname(os.path.abspath(__file__))
+
+app.mount("/static",StaticFiles(directory="static"),name="static")
+
+
+@app.get("/")
+async def landing():
+
+    return FileResponse(
+        os.path.join(BASE_DIR,"static","landing.html")
+    )
+
+
+@app.get("/app")
+async def app_page():
+
+    return FileResponse(
+        os.path.join(BASE_DIR,"static","index.html")
+    )
+
+
+@app.get("/learn")
+async def learn():
+
+    return FileResponse(
+        os.path.join(BASE_DIR,"static","learn-more.html")
+    )
