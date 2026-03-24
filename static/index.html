@@ -41,229 +41,142 @@ z-index:-1;
 }
 
 .card{
-
 width:460px;
-
 margin:auto;
-
 margin-top:40px;
-
 padding:30px;
-
 background:rgba(255,255,255,0.96);
-
 color:black;
-
 border-radius:15px;
-
 box-shadow:0 10px 35px rgba(0,0,0,0.6);
-
 max-height:85vh;
-
 overflow-y:auto;
-
 }
 
 .title{
-
 text-align:center;
-
 font-size:30px;
-
 font-weight:bold;
-
 margin-bottom:20px;
-
 }
 
 .tabs{
-
 display:flex;
-
 margin-bottom:20px;
-
 }
 
 .tabs button{
-
 flex:1;
-
 padding:12px;
-
 border:none;
-
 cursor:pointer;
-
 font-size:16px;
-
 }
 
 .active{
-
 background:#10b981;
-
 color:white;
-
 }
 
 .inactive{
-
 background:#e5e7eb;
-
 }
 
 input{
-
 width:100%;
-
 padding:12px;
-
 margin-bottom:15px;
-
 border-radius:8px;
-
 border:1px solid #ccc;
-
 font-size:15px;
-
+box-sizing:border-box;
 }
 
 button.main{
-
 width:100%;
-
 padding:13px;
-
 background:#10b981;
-
 color:white;
-
 border:none;
-
 border-radius:8px;
-
 cursor:pointer;
-
 font-size:16px;
-
 }
 
 button.main:hover{
-
 background:#059669;
-
 }
 
 #paymentScreen{
-
 display:none;
-
 }
 
 .result{
-
 margin-top:15px;
-
 padding:18px;
-
 border-radius:10px;
-
 word-wrap:break-word;
-
 }
 
 .good{
-
 background:#d1fae5;
-
 color:#065f46;
-
 }
 
 .bad{
-
 background:#fee2e2;
-
 color:#991b1b;
-
 }
 
 .riskBar{
-
 width:100%;
-
 height:20px;
-
 background:#e5e7eb;
-
 border-radius:10px;
-
 margin-top:10px;
-
 }
 
 .riskFill{
-
 height:100%;
-
 border-radius:10px;
-
 transition:0.5s;
-
 }
 
 .sectionTitle{
-
 margin-top:15px;
-
 font-weight:bold;
-
 font-size:18px;
-
 }
 
 ul{
-
 margin-top:5px;
-
 word-break:break-word;
-
 overflow-wrap:break-word;
+padding-left:20px;
+}
 
+li{
+margin-bottom:4px;
 }
 
 .badge{
-
 padding:6px 12px;
-
 border-radius:6px;
-
 color:white;
-
 font-weight:bold;
-
 display:inline-block;
-
 margin-top:8px;
-
 }
 
-.low{
+.low{background:#10b981;}
+.medium{background:#f59e0b;}
+.high{background:#ef4444;}
 
-background:#10b981;
-
-}
-
-.medium{
-
-background:#f59e0b;
-
-}
-
-.high{
-
-background:#ef4444;
-
+.loading{
+text-align:center;
+color:#6b7280;
+margin-top:10px;
+font-size:14px;
 }
 
 </style>
@@ -273,311 +186,325 @@ background:#ef4444;
 <body>
 
 <video class="bg-video" autoplay muted loop>
-<source src="/static/hero-bg.mp4" type="video/mp4">
+  <source src="/static/hero-bg.mp4" type="video/mp4">
 </video>
 
 <div class="video-overlay"></div>
 
 
+<!-- AUTH SCREEN -->
 <div id="authScreen" class="card">
 
-<div class="title">
-FinShield Security
-</div>
+  <div class="title">FinShield Security</div>
 
-<div class="tabs">
+  <div class="tabs">
+    <button id="loginBtn" class="active" onclick="showLogin()">Login</button>
+    <button id="registerBtn" class="inactive" onclick="showRegister()">Register</button>
+  </div>
 
-<button id="loginBtn" class="active" onclick="showLogin()">Login</button>
+  <div id="loginForm">
+    <input id="loginEmail" placeholder="Email" type="email">
+    <input id="loginPassword" type="password" placeholder="Password">
+    <button class="main" onclick="login()">Login</button>
+  </div>
 
-<button id="registerBtn" class="inactive" onclick="showRegister()">Register</button>
+  <div id="registerForm" style="display:none;">
+    <input id="registerEmail" placeholder="Email" type="email">
+    <input id="registerPassword" type="password" placeholder="Password">
+    <button class="main" onclick="register()">Register</button>
+  </div>
 
-</div>
-
-
-<div id="loginForm">
-
-<input id="loginEmail" placeholder="Email">
-
-<input id="loginPassword" type="password" placeholder="Password">
-
-<button class="main" onclick="login()">Login</button>
-
-</div>
-
-
-<div id="registerForm" style="display:none;">
-
-<input id="registerEmail" placeholder="Email">
-
-<input id="registerPassword" type="password" placeholder="Password">
-
-<button class="main" onclick="register()">Register</button>
-
-</div>
-
-<div id="authMessage"></div>
+  <div id="authMessage" style="margin-top:10px;color:red;font-size:14px;"></div>
 
 </div>
 
 
-
+<!-- PAYMENT SCREEN -->
 <div id="paymentScreen" class="card">
 
-<div class="title">
-Fraud Detection Payment
-</div>
+  <div class="title">Fraud Detection Payment</div>
 
-<input id="amount" type="number" value="100">
+  <input id="amount" type="number" value="100" min="1" placeholder="Enter amount (₹)">
 
-<button class="main" onclick="processPayment()">
-Analyse Transaction
-</button>
+  <button class="main" onclick="processPayment()">Analyse Transaction</button>
 
-<button class="main"
-style="margin-top:10px;background:#3b82f6"
-onclick="logout()">
+  <button class="main" style="margin-top:10px;background:#3b82f6" onclick="logout()">Logout</button>
 
-Logout
-
-</button>
-
-<div id="paymentResult"></div>
+  <div id="paymentResult"></div>
 
 </div>
 
 
 <script>
 
-const firebaseConfig={
-
- apiKey: "AIzaSyCRTxdDF195fHkQY0uuUilJr_SBGxd8mas",
+const firebaseConfig = {
+   apiKey: "AIzaSyCRTxdDF195fHkQY0uuUilJr_SBGxd8mas",
   authDomain: "finshield-82819.firebaseapp.com",
   projectId: "finshield-82819",
   storageBucket: "finshield-82819.firebasestorage.app",
   messagingSenderId: "666957378242",
   appId: "1:666957378242:web:1a55e56e9dacae8cac815b"
-
 };
 
 firebase.initializeApp(firebaseConfig);
 
-const auth=firebase.auth();
+const auth = firebase.auth();
 
-let currentUser=null;
+let currentUser = null;
 
 
-function showLogin(){
+// --- Tab switching ---
 
-loginForm.style.display="block";
-
-registerForm.style.display="none";
-
-loginBtn.className="active";
-
-registerBtn.className="inactive";
-
+function showLogin() {
+  loginForm.style.display = "block";
+  registerForm.style.display = "none";
+  loginBtn.className = "active";
+  registerBtn.className = "inactive";
+  authMessage.innerHTML = "";
 }
 
-function showRegister(){
-
-registerForm.style.display="block";
-
-loginForm.style.display="none";
-
-registerBtn.className="active";
-
-loginBtn.className="inactive";
-
+function showRegister() {
+  registerForm.style.display = "block";
+  loginForm.style.display = "none";
+  registerBtn.className = "active";
+  loginBtn.className = "inactive";
+  authMessage.innerHTML = "";
 }
 
 
-async function register(){
+// --- Register ---
 
-const email=registerEmail.value;
+async function register() {
+  const email = registerEmail.value.trim();
+  const password = registerPassword.value;
 
-const password=registerPassword.value;
+  if (!email || !password) {
+    authMessage.innerHTML = "Please fill in all fields.";
+    return;
+  }
 
-try{
+  try {
+    const userCred = await auth.createUserWithEmailAndPassword(email, password);
 
-const user=await auth.createUserWithEmailAndPassword(email,password);
+    await fetch("/register-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        uid: userCred.user.uid,
+        email: userCred.user.email
+      })
+    });
 
-await fetch("/register-user",{
+    authMessage.style.color = "green";
+    authMessage.innerHTML = "Registered successfully. Please login.";
+    showLogin();
 
-method:"POST",
-
-headers:{"Content-Type":"application/json"},
-
-body:JSON.stringify({
-
-uid:user.user.uid,
-
-email:user.user.email
-
-})
-
-});
-
-authMessage.innerHTML="Registered successfully";
-
-showLogin();
-
-}
-
-catch(e){
-
-authMessage.innerHTML=e.message;
-
-}
-
+  } catch(e) {
+    authMessage.style.color = "red";
+    authMessage.innerHTML = e.message;
+  }
 }
 
 
-async function login(){
+// --- Login ---
 
-const email=loginEmail.value;
+async function login() {
+  const email = loginEmail.value.trim();
+  const password = loginPassword.value;
 
-const password=loginPassword.value;
+  if (!email || !password) {
+    authMessage.innerHTML = "Please fill in all fields.";
+    return;
+  }
 
-try{
+  try {
+    const userCred = await auth.signInWithEmailAndPassword(email, password);
+    currentUser = userCred.user;
 
-const user=await auth.signInWithEmailAndPassword(email,password);
+    // FIX: Call login-success to reset failed_attempts in Firestore
+    await fetch("/login-success", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        uid: currentUser.uid,
+        email: currentUser.email
+      })
+    });
 
-currentUser=user.user;
+    authScreen.style.display = "none";
+    paymentScreen.style.display = "block";
 
-authScreen.style.display="none";
+  } catch(e) {
+    // FIX: Send email (not uid) to login-failed since uid is unknown on failed auth
+    await fetch("/login-failed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: loginEmail.value.trim()
+      })
+    });
 
-paymentScreen.style.display="block";
-
-}
-
-catch(e){
-
-authMessage.innerHTML=e.message;
-
-}
-
-}
-
-
-function logout(){
-
-auth.signOut();
-
-paymentScreen.style.display="none";
-
-authScreen.style.display="block";
-
-}
-
-
-
-async function processPayment(){
-
-const amt=parseFloat(document.getElementById("amount").value);
-
-const device=navigator.platform+" | "+navigator.userAgent.split(" ")[0];
-
-const response=await fetch("/payment",{
-
-method:"POST",
-
-headers:{"Content-Type":"application/json"},
-
-body:JSON.stringify({
-
-user_id:currentUser.uid,
-
-amount:amt,
-
-device_fingerprint:device
-
-})
-
-});
-
-const result=await response.json();
-
-
-let riskList="";
-
-result.risk_factors.forEach(r=>{
-riskList+="<li>"+r+"</li>";
-});
-
-let safeList="";
-
-result.safe_factors.forEach(s=>{
-safeList+="<li>"+s+"</li>";
-});
-
-
-let evidence="";
-
-for(let key in result.detected_data){
-
-evidence+="<li><b>"+key+" :</b> "+result.detected_data[key]+"</li>";
-
+    authMessage.style.color = "red";
+    authMessage.innerHTML = e.message;
+  }
 }
 
 
-let color="#10b981";
+// --- Logout ---
 
-let severity="LOW";
-
-let severityClass="low";
-
-if(result.risk_score>40){
-
-color="#ef4444";
-
-severity="HIGH";
-
-severityClass="high";
-
-}
-else if(result.risk_score>20){
-
-color="#f59e0b";
-
-severity="MEDIUM";
-
-severityClass="medium";
-
+function logout() {
+  auth.signOut();
+  currentUser = null;
+  paymentScreen.style.display = "none";
+  authScreen.style.display = "block";
+  paymentResult.innerHTML = "";
+  loginEmail.value = "";
+  loginPassword.value = "";
+  authMessage.innerHTML = "";
 }
 
 
-paymentResult.innerHTML=
+// --- FIX: Clean, readable device fingerprint ---
+// Instead of raw userAgent (which is long and messy), we extract:
+// OS name + browser name only.
 
-'<div class="result '+(result.allowed?'good':'bad')+'">'+
+function getDeviceFingerprint() {
+  const ua = navigator.userAgent;
 
-'<h3>Prediction : '+result.prediction+'</h3>'+
+  // Detect OS
+  let os = "Unknown OS";
+  if (/Windows NT 10/.test(ua)) os = "Windows 10";
+  else if (/Windows NT 6\.3/.test(ua)) os = "Windows 8.1";
+  else if (/Windows NT 6\.1/.test(ua)) os = "Windows 7";
+  else if (/Mac OS X/.test(ua)) {
+    const match = ua.match(/Mac OS X ([\d_]+)/);
+    os = "macOS " + (match ? match[1].replace(/_/g, ".") : "");
+  }
+  else if (/Android ([\d.]+)/.test(ua)) {
+    const match = ua.match(/Android ([\d.]+)/);
+    os = "Android " + (match ? match[1] : "");
+  }
+  else if (/iPhone OS ([\d_]+)/.test(ua)) {
+    const match = ua.match(/iPhone OS ([\d_]+)/);
+    os = "iOS " + (match ? match[1].replace(/_/g, ".") : "");
+  }
+  else if (/Linux/.test(ua)) os = "Linux";
 
-'<b>Risk Score :</b> '+result.risk_score+'%'+
+  // Detect Browser
+  let browser = "Unknown Browser";
+  if (/Edg\//.test(ua)) browser = "Edge";
+  else if (/OPR\/|Opera/.test(ua)) browser = "Opera";
+  else if (/Chrome\//.test(ua)) browser = "Chrome";
+  else if (/Firefox\//.test(ua)) browser = "Firefox";
+  else if (/Safari\//.test(ua) && !/Chrome/.test(ua)) browser = "Safari";
 
-'<div class="riskBar">'+
-'<div class="riskFill" style="width:'+result.risk_score+'%;background:'+color+';"></div>'+
-'</div>'+
+  return os + " | " + browser;
+}
 
-'<div class="badge '+severityClass+'">'+severity+' RISK</div>'+
 
-'<div class="sectionTitle">Transaction Evidence</div>'+
+// --- Process Payment ---
 
-'<ul>'+evidence+'</ul>'+
+async function processPayment() {
+  const amt = parseFloat(document.getElementById("amount").value);
 
-'<div class="sectionTitle">Risk Factors</div>'+
+  if (!amt || amt <= 0) {
+    paymentResult.innerHTML = '<p style="color:red;">Please enter a valid amount.</p>';
+    return;
+  }
 
-'<ul>'+riskList+'</ul>'+
+  paymentResult.innerHTML = '<div class="loading">Analysing transaction...</div>';
 
-'<div class="sectionTitle">Safe Factors</div>'+
+  const device = getDeviceFingerprint();
 
-'<ul>'+safeList+'</ul>'+
+  try {
+    const response = await fetch("/payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: currentUser.uid,
+        amount: amt,
+        device_fingerprint: device
+      })
+    });
 
-'</div>';
+    if (!response.ok) {
+      const err = await response.json();
+      paymentResult.innerHTML = '<p style="color:red;">Error: ' + (err.detail || "Unknown error") + '</p>';
+      return;
+    }
 
+    const result = await response.json();
+
+    // Build risk factors list
+    let riskList = "";
+    if (result.risk_factors.length === 0) {
+      riskList = "<li>None detected</li>";
+    } else {
+      result.risk_factors.forEach(r => {
+        riskList += "<li>⚠️ " + r + "</li>";
+      });
+    }
+
+    // Build safe factors list
+    let safeList = "";
+    if (result.safe_factors.length === 0) {
+      safeList = "<li>None</li>";
+    } else {
+      result.safe_factors.forEach(s => {
+        safeList += "<li>✅ " + s + "</li>";
+      });
+    }
+
+    // Build evidence list
+    let evidence = "";
+    for (let key in result.detected_data) {
+      evidence += "<li><b>" + key + ":</b> " + result.detected_data[key] + "</li>";
+    }
+
+    // Risk colour and badge
+    let color = "#10b981";
+    let severity = "LOW";
+    let severityClass = "low";
+
+    if (result.risk_score > 40) {
+      color = "#ef4444";
+      severity = "HIGH";
+      severityClass = "high";
+    } else if (result.risk_score > 20) {
+      color = "#f59e0b";
+      severity = "MEDIUM";
+      severityClass = "medium";
+    }
+
+    paymentResult.innerHTML =
+      '<div class="result ' + (result.allowed ? 'good' : 'bad') + '">' +
+
+        '<h3>Prediction: ' + result.prediction + '</h3>' +
+
+        '<b>Risk Score:</b> ' + result.risk_score + '%' +
+        '<div class="riskBar">' +
+          '<div class="riskFill" style="width:' + result.risk_score + '%;background:' + color + ';"></div>' +
+        '</div>' +
+
+        '<div class="badge ' + severityClass + '">' + severity + ' RISK</div>' +
+
+        '<div class="sectionTitle">Transaction Evidence</div>' +
+        '<ul>' + evidence + '</ul>' +
+
+        '<div class="sectionTitle">Why This Was Flagged</div>' +
+        '<ul>' + riskList + '</ul>' +
+
+        '<div class="sectionTitle">Why This Looks Safe</div>' +
+        '<ul>' + safeList + '</ul>' +
+
+      '</div>';
+
+  } catch(e) {
+    paymentResult.innerHTML = '<p style="color:red;">Network error. Please try again.</p>';
+  }
 }
 
 </script>
 
 </body>
-
 </html>
