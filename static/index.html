@@ -1,495 +1,583 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fraud Detection Payment System</title>
 
-    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-    <link rel="stylesheet" href="/static/styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<title>FinShield Fraud Detection</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+
+<style>
+
+body{
+margin:0;
+font-family:Segoe UI;
+overflow-y:auto;
+color:white;
+}
+
+.bg-video{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+object-fit:cover;
+z-index:-2;
+}
+
+.video-overlay{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.75);
+z-index:-1;
+}
+
+.card{
+
+width:460px;
+
+margin:auto;
+
+margin-top:40px;
+
+padding:30px;
+
+background:rgba(255,255,255,0.96);
+
+color:black;
+
+border-radius:15px;
+
+box-shadow:0 10px 35px rgba(0,0,0,0.6);
+
+max-height:85vh;
+
+overflow-y:auto;
+
+}
+
+.title{
+
+text-align:center;
+
+font-size:30px;
+
+font-weight:bold;
+
+margin-bottom:20px;
+
+}
+
+.tabs{
+
+display:flex;
+
+margin-bottom:20px;
+
+}
+
+.tabs button{
+
+flex:1;
+
+padding:12px;
+
+border:none;
+
+cursor:pointer;
+
+font-size:16px;
+
+}
+
+.active{
+
+background:#10b981;
+
+color:white;
+
+}
+
+.inactive{
+
+background:#e5e7eb;
+
+}
+
+input{
+
+width:100%;
+
+padding:12px;
+
+margin-bottom:15px;
+
+border-radius:8px;
+
+border:1px solid #ccc;
+
+font-size:15px;
+
+}
+
+button.main{
+
+width:100%;
+
+padding:13px;
+
+background:#10b981;
+
+color:white;
+
+border:none;
+
+border-radius:8px;
+
+cursor:pointer;
+
+font-size:16px;
+
+}
+
+button.main:hover{
+
+background:#059669;
+
+}
+
+#paymentScreen{
+
+display:none;
+
+}
+
+.result{
+
+margin-top:15px;
+
+padding:18px;
+
+border-radius:10px;
+
+word-wrap:break-word;
+
+}
+
+.good{
+
+background:#d1fae5;
+
+color:#065f46;
+
+}
+
+.bad{
+
+background:#fee2e2;
+
+color:#991b1b;
+
+}
+
+.riskBar{
+
+width:100%;
+
+height:20px;
+
+background:#e5e7eb;
+
+border-radius:10px;
+
+margin-top:10px;
+
+}
+
+.riskFill{
+
+height:100%;
+
+border-radius:10px;
+
+transition:0.5s;
+
+}
+
+.sectionTitle{
+
+margin-top:15px;
+
+font-weight:bold;
+
+font-size:18px;
+
+}
+
+ul{
+
+margin-top:5px;
+
+word-break:break-word;
+
+overflow-wrap:break-word;
+
+}
+
+.badge{
+
+padding:6px 12px;
+
+border-radius:6px;
+
+color:white;
+
+font-weight:bold;
+
+display:inline-block;
+
+margin-top:8px;
+
+}
+
+.low{
+
+background:#10b981;
+
+}
+
+.medium{
+
+background:#f59e0b;
+
+}
+
+.high{
+
+background:#ef4444;
+
+}
+
+</style>
+
 </head>
 
-<body class="bg-gray-100 min-h-screen">
+<body>
 
-    <!-- BACKGROUND VIDEO (DESIGN ONLY) -->
-    <video class="bg-video" autoplay muted loop playsinline>
-        <source src="/static/assest/hero-bg.mp4" type="video/mp4">
-    </video>
-    <div class="video-overlay"></div>
+<video class="bg-video" autoplay muted loop>
+<source src="/static/hero-bg.mp4" type="video/mp4">
+</video>
 
-    <div id="app" class="px-4">
+<div class="video-overlay"></div>
 
-        <!-- LOGIN / REGISTER -->
-        <div id="authScreen" class="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
-            <h1 class="text-2xl font-bold text-center mb-6">Powered by FinShield</h1>
 
-            <div class="flex mb-6">
-                <button onclick="showLogin()" id="loginBtn"
-                    class="flex-1 py-2 px-4 bg-blue-500 text-white rounded-l-lg">Login</button>
-                <button onclick="showRegister()" id="registerBtn"
-                    class="flex-1 py-2 px-4 bg-gray-300 text-gray-700 rounded-r-lg">Register</button>
-            </div>
+<div id="authScreen" class="card">
 
-            <div id="loginForm">
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
-                    <input type="email" id="loginEmail"
-                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
-                        placeholder="Enter your email">
-                </div>
+<div class="title">
+FinShield Security
+</div>
 
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
-                    <input type="password" id="loginPassword"
-                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
-                        placeholder="Enter your password">
-                </div>
+<div class="tabs">
 
-                <button onclick="login()"
-                    class="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600">
-                    Login
-                </button>
-            </div>
+<button id="loginBtn" class="active" onclick="showLogin()">Login</button>
 
-            <div id="registerForm" class="hidden">
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
-                    <input type="email" id="registerEmail"
-                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
-                        placeholder="Enter your email">
-                </div>
+<button id="registerBtn" class="inactive" onclick="showRegister()">Register</button>
 
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
-                    <input type="password" id="registerPassword"
-                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
-                        placeholder="Enter your password">
-                </div>
+</div>
 
-                <button onclick="register()"
-                    class="w-full bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600">
-                    Register
-                </button>
-            </div>
 
-            <div id="authMessage" class="mt-4 text-center text-sm"></div>
-        </div>
+<div id="loginForm">
 
-        <!-- PAYMENT -->
-        <div id="paymentScreen" class="hidden max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
-            <h1 class="text-2xl font-bold text-center mb-6">FinShield Detector</h1>
+<input id="loginEmail" placeholder="Email">
 
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2">Amount ($)</label>
-                <input type="number" id="amount"
-                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
-                    value="100">
-            </div>
+<input id="loginPassword" type="password" placeholder="Password">
 
-            <div class="bg-gray-50 rounded-lg p-4 mb-6">
-                <h3 class="font-semibold mb-3">Detected Information</h3>
-                <div class="space-y-2 text-sm">
-                    <div><strong>IP Address:</strong> <span id="detectedIP">-</span></div>
-                    <div><strong>Device:</strong> <span id="detectedDevice">-</span></div>
-                    <div><strong>Time:</strong> <span id="detectedTime">-</span></div>
-                    <div><strong>Transaction Count (24h):</strong> <span id="txnCount">-</span></div>
-                </div>
-            </div>
+<button class="main" onclick="login()">Login</button>
 
-            <button onclick="processPayment()"
-                class="w-full bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600">
-                Analyse Payment
-            </button>
+</div>
 
-            <button onclick="showUserDetails()"
-                class="w-full mt-3 bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600">
-                View User Details
-            </button>
 
-            <button onclick="logout()"
-                class="w-full mt-3 bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600">
-                Logout
-            </button>
+<div id="registerForm" style="display:none;">
 
-            <div id="paymentResult" class="mt-4"></div>
-        </div>
+<input id="registerEmail" placeholder="Email">
 
-        <!-- VERIFICATION -->
-        <div id="verificationScreen" class="hidden max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
-            <div id="userDataDisplay" class="bg-gray-50 rounded-lg p-4"></div>
-            <button onclick="backToPayment()"
-                class="w-full mt-4 bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600">
-                Back to Payment
-            </button>
-        </div>
+<input id="registerPassword" type="password" placeholder="Password">
 
-    </div>
+<button class="main" onclick="register()">Register</button>
+
+</div>
+
+<div id="authMessage"></div>
+
+</div>
+
+
+
+<div id="paymentScreen" class="card">
+
+<div class="title">
+Fraud Detection Payment
+</div>
+
+<input id="amount" type="number" value="100">
+
+<button class="main" onclick="processPayment()">
+Analyse Transaction
+</button>
+
+<button class="main"
+style="margin-top:10px;background:#3b82f6"
+onclick="logout()">
+
+Logout
+
+</button>
+
+<div id="paymentResult"></div>
+
+</div>
+
+
 <script>
-        // // Firebase configuration - REPLACE WITH YOUR CONFIG
-        // const firebaseConfig = {
-        //     apiKey: "your-api-key",
-        //     authDomain: "your-project.firebaseapp.com",
-        //     projectId: "your-project-id",
-        //     storageBucket: "your-project.appspot.com",
-        //     messagingSenderId: "your-sender-id",
-        //     appId: "your-app-id"
-        // };
-        // // Import the functions you need from the SDKs you need
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDEjKjG2iaQ-3gOK8cfMBOABS1rkIfb7A0",
-  authDomain: "fraud-detection-demo-1ccf1.firebaseapp.com",
-  projectId: "fraud-detection-demo-1ccf1",
-  storageBucket: "fraud-detection-demo-1ccf1.firebasestorage.app",
-  messagingSenderId: "870429881793",
-  appId: "1:870429881793:web:334f38330d83fbe3bd2b40"
+const firebaseConfig={
+
+ apiKey: "AIzaSyCRTxdDF195fHkQY0uuUilJr_SBGxd8mas",
+  authDomain: "finshield-82819.firebaseapp.com",
+  projectId: "finshield-82819",
+  storageBucket: "finshield-82819.firebasestorage.app",
+  messagingSenderId: "666957378242",
+  appId: "1:666957378242:web:1a55e56e9dacae8cac815b"
+
 };
 
+firebase.initializeApp(firebaseConfig);
 
-        
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        
-        let currentUser = null;
-        
-        // UI Functions
-        function showLogin() {
-            document.getElementById('loginForm').classList.remove('hidden');
-            document.getElementById('registerForm').classList.add('hidden');
-            document.getElementById('loginBtn').classList.add('bg-blue-500', 'text-white');
-            document.getElementById('loginBtn').classList.remove('bg-gray-300', 'text-gray-700');
-            document.getElementById('registerBtn').classList.remove('bg-green-500', 'text-white');
-            document.getElementById('registerBtn').classList.add('bg-gray-300', 'text-gray-700');
-        }
-        
-        function showRegister() {
-            document.getElementById('registerForm').classList.remove('hidden');
-            document.getElementById('loginForm').classList.add('hidden');
-            document.getElementById('registerBtn').classList.add('bg-green-500', 'text-white');
-            document.getElementById('registerBtn').classList.remove('bg-gray-300', 'text-gray-700');
-            document.getElementById('loginBtn').classList.remove('bg-blue-500', 'text-white');
-            document.getElementById('loginBtn').classList.add('bg-gray-300', 'text-gray-700');
-        }
-        
-        function showMessage(elementId, message, isError = false) {
-            const element = document.getElementById(elementId);
-            element.textContent = message;
-            element.className = isError ? 'mt-4 text-center text-sm text-red-600' : 'mt-4 text-center text-sm text-green-600';
-        }
-        
-        // Authentication Functions
-        async function register() {
-            const email = document.getElementById('registerEmail').value;
-            const password = document.getElementById('registerPassword').value;
-            
-            try {
-                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                const user = userCredential.user;
-                
-                // Get ID token
-                const idToken = await user.getIdToken();
-                
-                // Register user in backend
-                const response = await fetch('/register-user', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        uid: user.uid,
-                        email: user.email
-                    })
-                });
-                
-                if (response.ok) {
-                    showMessage('authMessage', 'Registration successful! Please login.');
-                    showLogin();
-                } else {
-                    showMessage('authMessage', 'Registration failed. Please try again.', true);
-                }
-            } catch (error) {
-                showMessage('authMessage', error.message, true);
-            }
-        }
-        
-        async function login() {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            
-            try {
-                const userCredential = await auth.signInWithEmailAndPassword(email, password);
-                currentUser = userCredential.user;
-                
-                // Show payment screen
-                document.getElementById('authScreen').classList.add('hidden');
-                document.getElementById('paymentScreen').classList.remove('hidden');
-                
-                // Load detected info
-                await loadDetectedInfo();
-                
-            } catch (error) {
-                showMessage('authMessage', error.message, true);
-            }
-        }
-        
-        function logout() {
-            auth.signOut();
-            currentUser = null;
-            document.getElementById('paymentScreen').classList.add('hidden');
-            document.getElementById('verificationScreen').classList.add('hidden');
-            document.getElementById('authScreen').classList.remove('hidden');
-            
-            // Clear forms
-            document.getElementById('loginEmail').value = '';
-            document.getElementById('loginPassword').value = '';
-            document.getElementById('registerEmail').value = '';
-            document.getElementById('registerPassword').value = '';
-        }
-        
-        // Payment Functions
-        async function loadDetectedInfo() {
-            if (!currentUser) return;
-            
-            try {
-                // Get user data from backend
-                const response = await fetch(`/user/${currentUser.uid}`);
-                const userData = await response.json();
-                
-                // Display detected info
-                document.getElementById('detectedIP').textContent = userData.last_ip || 'First transaction';
-                document.getElementById('detectedDevice').textContent = userData.last_device ? userData.last_device.substring(0, 50) + '...' : 'First transaction';
-                document.getElementById('detectedTime').textContent = userData.last_txn_time ? new Date(userData.last_txn_time).toLocaleString() : 'First transaction';
-                document.getElementById('txnCount').textContent = userData.txn_count_24h || 0;
-                
-            } catch (error) {
-                console.error('Error loading user data:', error);
-            }
-        }
-        
-        async function processPayment() {
-    if (!currentUser) return;
+const auth=firebase.auth();
 
-    const amount = parseFloat(document.getElementById('amount').value);
-    if (!amount || amount <= 0) {
-        alert('Please enter a valid amount');
-        return;
-    }
+let currentUser=null;
 
-    // REAL device fingerprint (privacy-safe)
-    const deviceFingerprint = btoa(JSON.stringify({
-        userAgent: navigator.userAgent,
-        platform: navigator.platform,
-        language: navigator.language,
-        screen: `${screen.width}x${screen.height}`,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        cpuCores: navigator.hardwareConcurrency || 0,
-        touchPoints: navigator.maxTouchPoints || 0
-    }));
 
-    try {
-        const response = await fetch('/payment', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                user_id: currentUser.uid,
-                amount: amount,
-                device_fingerprint: deviceFingerprint
-            })
-        });
+function showLogin(){
 
-        const result = await response.json();
+loginForm.style.display="block";
 
-        // Display result
-        const resultDiv = document.getElementById('paymentResult');
+registerForm.style.display="none";
 
-        if (result.allowed) {
-            resultDiv.innerHTML = `
-                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                    <strong class="font-bold">Secure User and Transaction Confirmed!</strong><br>
-                    <span class="block sm:inline">
-                        Transaction approval status: ${result.prediction}
-                    </span>
-                </div>
-            `;
-        } else {
-            resultDiv.innerHTML = `
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                    <strong class="font-bold">Transaction Blocked!</strong><br>
-                    <span class="block sm:inline">
-                        Potential Fraud status: ${result.prediction}
-                    </span><br>
-                    <span class="text-sm">
-    Risk factors →
-    IP changes: ${result.risk_factors.ip_change_count},
-    Device changes: ${result.risk_factors.device_change_count}
-    ${result.risk_factors.odd_time ? ', Odd time transaction' : ''}
-</span>
+loginBtn.className="active";
 
-                </div>
-            `;
-        }
+registerBtn.className="inactive";
 
-        // Reload detected info
-        await loadDetectedInfo();
-
-    } catch (error) {
-        document.getElementById('paymentResult').innerHTML = `
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                <strong class="font-bold">Error:</strong> ${error.message}
-            </div>
-        `;
-    }
 }
 
-        
-        async function showUserDetails() {
-    if (!currentUser) return;
+function showRegister(){
 
-    try {
-        const response = await fetch(`/user/${currentUser.uid}`);
-        const userData = await response.json();
+registerForm.style.display="block";
 
-        document.getElementById('paymentScreen').classList.add('hidden');
-        document.getElementById('verificationScreen').classList.remove('hidden');
+loginForm.style.display="none";
 
-        const displayDiv = document.getElementById('userDataDisplay');
+registerBtn.className="active";
 
-        displayDiv.innerHTML = `
-            <h3 class="font-semibold mb-4">Stored User Data</h3>
+loginBtn.className="inactive";
 
-            <div class="grid grid-cols-[180px_1fr] gap-y-2 text-sm">
-                <div class="font-semibold text-gray-700">Email:</div>
-                <div class="text-gray-900">${userData.email}</div>
-
-                <div class="font-semibold text-gray-700">Last IP:</div>
-                <div class="text-gray-900">${userData.last_ip || 'None'}</div>
-
-                <div class="font-semibold text-gray-700">Last Device:</div>
-                <div class="text-gray-900">
-                    ${userData.last_device ? decodeDeviceFingerprint(userData.last_device) : 'None'}
-                </div>
-
-                <div class="font-semibold text-gray-700">Last Transaction:</div>
-                <div class="text-gray-900">
-                    ${userData.last_txn_time
-                        ? new Date(userData.last_txn_time).toLocaleString()
-                        : 'None'}
-                </div>
-
-                <div class="font-semibold text-gray-700">Transaction Count (24h):</div>
-                <div class="text-gray-900">${userData.txn_count_24h}</div>
-
-                <div class="font-semibold text-gray-700">IP Change Count:</div>
-                <div class="text-gray-900">${userData.ip_change_count || 0}</div>
-
-                <div class="font-semibold text-gray-700">Device Change Count:</div>
-                <div class="text-gray-900">${userData.device_change_count || 0}</div>
-            </div>
-
-            ${
-                userData.test_mode
-                    ? `<div class="mt-4 p-2 bg-yellow-100 rounded text-yellow-800 text-xs font-semibold">
-                        ⚠️ Test Mode Active
-                       </div>`
-                    : ''
-            }
-        `;
-    } catch (error) {
-        alert('Error loading user data: ' + error.message);
-    }
 }
 
-        
-        async function showVerification() {
-            if (!currentUser) return;
-            
-            try {
-                const response = await fetch(`/user/${currentUser.uid}`);
-                const userData = await response.json();
-                
-                document.getElementById('paymentScreen').classList.add('hidden');
-                document.getElementById('verificationScreen').classList.remove('hidden');
-                
-                const displayDiv = document.getElementById('userDataDisplay');
-                displayDiv.innerHTML = `
-                    <h3 class="font-semibold mb-3">Stored User Data</h3>
-                    <div class="space-y-2 text-sm">
-                        <div><strong>Email:</strong> ${userData.email}</div>
-                        <div><strong>Last IP:</strong> ${userData.last_ip || 'None'}</div>
-                        <div><strong>Last Device:</strong> ${userData.last_device || 'None'}</div>
-                        <div><strong>Last Transaction:</strong> ${userData.last_txn_time || 'None'}</div>
-                        <div><strong>Transaction Count (24h):</strong> ${userData.txn_count_24h}</div>
-                    </div>
-                `;
-            } catch (error) {
-                alert('Error loading user data: ' + error.message);
-            }
-        }
-        
-        function backToPayment() {
-            document.getElementById('verificationScreen').classList.add('hidden');
-            document.getElementById('paymentScreen').classList.remove('hidden');
-        }
-        
-        // Check auth state on load
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                currentUser = user;
-                document.getElementById('authScreen').classList.add('hidden');
-                document.getElementById('paymentScreen').classList.remove('hidden');
-                loadDetectedInfo();
-            }
-        });
-    </script>
-    <script>
-function getDeviceFingerprint() {
-    const fpData = {
-        userAgent: navigator.userAgent,
-        platform: navigator.platform,
-        language: navigator.language,
-        screenResolution: `${screen.width}x${screen.height}`,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        cpuCores: navigator.hardwareConcurrency || 0,
-        touchSupport: navigator.maxTouchPoints || 0
-    };
 
-    return btoa(JSON.stringify(fpData)); // base64 encoded fingerprint
-}
-function decodeDeviceFingerprint(fp) {
-    try {
-        const decoded = JSON.parse(atob(fp));
+async function register(){
 
-        const ua = decoded.userAgent || "";
-        const platform = decoded.platform || "Unknown";
+const email=registerEmail.value;
 
-        let browser = "Unknown Browser";
+const password=registerPassword.value;
 
-        // IMPORTANT: order matters
-        if (ua.includes("Edg")) browser = "Microsoft Edge";
-        else if (ua.includes("Firefox")) browser = "Firefox";
-        else if (ua.includes("Chrome")) browser = "Chrome";
-        else if (ua.includes("Safari")) browser = "Safari";
+try{
 
-        let os = "Unknown OS";
-        if (ua.includes("Windows NT")) os = "Windows";
-        else if (ua.includes("Mac OS X")) os = "MacOS";
-        else if (ua.includes("Android")) os = "Android";
-        else if (ua.includes("iPhone") || ua.includes("iPad")) os = "iOS";
-        else if (ua.includes("Linux")) os = "Linux";
+const user=await auth.createUserWithEmailAndPassword(email,password);
 
-        return `${browser} on ${os} (${platform})`;
-    } catch (e) {
-        return "Unknown Device";
-    }
+await fetch("/register-user",{
+
+method:"POST",
+
+headers:{"Content-Type":"application/json"},
+
+body:JSON.stringify({
+
+uid:user.user.uid,
+
+email:user.user.email
+
+})
+
+});
+
+authMessage.innerHTML="Registered successfully";
+
+showLogin();
+
 }
 
+catch(e){
+
+authMessage.innerHTML=e.message;
+
+}
+
+}
+
+
+async function login(){
+
+const email=loginEmail.value;
+
+const password=loginPassword.value;
+
+try{
+
+const user=await auth.signInWithEmailAndPassword(email,password);
+
+currentUser=user.user;
+
+authScreen.style.display="none";
+
+paymentScreen.style.display="block";
+
+}
+
+catch(e){
+
+authMessage.innerHTML=e.message;
+
+}
+
+}
+
+
+function logout(){
+
+auth.signOut();
+
+paymentScreen.style.display="none";
+
+authScreen.style.display="block";
+
+}
+
+
+
+async function processPayment(){
+
+const amt=parseFloat(document.getElementById("amount").value);
+
+const device=navigator.platform+" | "+navigator.userAgent.split(" ")[0];
+
+const response=await fetch("/payment",{
+
+method:"POST",
+
+headers:{"Content-Type":"application/json"},
+
+body:JSON.stringify({
+
+user_id:currentUser.uid,
+
+amount:amt,
+
+device_fingerprint:device
+
+})
+
+});
+
+const result=await response.json();
+
+
+let riskList="";
+
+result.risk_factors.forEach(r=>{
+riskList+="<li>"+r+"</li>";
+});
+
+let safeList="";
+
+result.safe_factors.forEach(s=>{
+safeList+="<li>"+s+"</li>";
+});
+
+
+let evidence="";
+
+for(let key in result.detected_data){
+
+evidence+="<li><b>"+key+" :</b> "+result.detected_data[key]+"</li>";
+
+}
+
+
+let color="#10b981";
+
+let severity="LOW";
+
+let severityClass="low";
+
+if(result.risk_score>40){
+
+color="#ef4444";
+
+severity="HIGH";
+
+severityClass="high";
+
+}
+else if(result.risk_score>20){
+
+color="#f59e0b";
+
+severity="MEDIUM";
+
+severityClass="medium";
+
+}
+
+
+paymentResult.innerHTML=
+
+'<div class="result '+(result.allowed?'good':'bad')+'">'+
+
+'<h3>Prediction : '+result.prediction+'</h3>'+
+
+'<b>Risk Score :</b> '+result.risk_score+'%'+
+
+'<div class="riskBar">'+
+'<div class="riskFill" style="width:'+result.risk_score+'%;background:'+color+';"></div>'+
+'</div>'+
+
+'<div class="badge '+severityClass+'">'+severity+' RISK</div>'+
+
+'<div class="sectionTitle">Transaction Evidence</div>'+
+
+'<ul>'+evidence+'</ul>'+
+
+'<div class="sectionTitle">Risk Factors</div>'+
+
+'<ul>'+riskList+'</ul>'+
+
+'<div class="sectionTitle">Safe Factors</div>'+
+
+'<ul>'+safeList+'</ul>'+
+
+'</div>';
+
+}
 
 </script>
+
 </body>
+
 </html>
