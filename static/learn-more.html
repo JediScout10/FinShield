@@ -1,225 +1,400 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <title>How Our Fraud Detection Works</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    body {
-      font-family: "Segoe UI", Arial, sans-serif;
-      background: #0b0b0b;
-      color: #ffffff;
-      line-height: 1.6;
-    }
+<title>FinShield Fraud Intelligence</title>
 
-    header {
-      padding: 30px 60px;
-      border-bottom: 1px solid #222;
-    }
+<style>
 
-    header a {
-      color: #ff5c5c;
-      text-decoration: none;
-      font-weight: 600;
-    }
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
 
-    section {
-      max-width: 1100px;
-      margin: auto;
-      padding: 80px 60px;
-    }
+body{
 
-    h1 {
-      font-size: 48px;
-      font-weight: 300;
-      margin-bottom: 30px;
-    }
+font-family:Segoe UI;
 
-    h2 {
-      font-size: 28px;
-      margin-bottom: 20px;
-      color: #ff5c5c;
-    }
+background:#0b0f17;
 
-    p {
-      color: #cccccc;
-      margin-bottom: 20px;
-      font-size: 16px;
-    }
+color:white;
 
-    .flow {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 25px;
-      margin-top: 40px;
-    }
+line-height:1.6;
 
-    .card {
-      background: #141414;
-      border: 1px solid #222;
-      padding: 25px;
-      border-radius: 6px;
-    }
+}
 
-    .card h3 {
-      margin-bottom: 10px;
-      font-size: 18px;
-      color: #ffffff;
-    }
+header{
 
-    .highlight {
-      background: #111;
-      border-left: 4px solid #ff5c5c;
-      padding: 20px;
-      margin: 40px 0;
-    }
+padding:25px 50px;
 
-    .cta {
-      text-align: center;
-      margin-top: 80px;
-    }
+border-bottom:1px solid #1f2937;
 
-    .cta a {
-      background: #ff5c5c;
-      color: #000;
-      padding: 16px 34px;
-      text-decoration: none;
-      font-weight: 600;
-      border-radius: 4px;
-      display: inline-block;
-    }
+}
 
-    @media (max-width: 768px) {
-      section {
-        padding: 60px 20px;
-      }
+header a{
 
-      h1 {
-        font-size: 36px;
-      }
-    }
-  </style>
+color:#10b981;
+
+text-decoration:none;
+
+font-weight:600;
+
+}
+
+section{
+
+max-width:1100px;
+
+margin:auto;
+
+padding:70px 40px;
+
+}
+
+h1{
+
+font-size:44px;
+
+font-weight:300;
+
+margin-bottom:30px;
+
+}
+
+h2{
+
+font-size:26px;
+
+margin-top:40px;
+
+margin-bottom:15px;
+
+color:#10b981;
+
+}
+
+p{
+
+color:#cbd5e1;
+
+margin-bottom:20px;
+
+}
+
+.flow{
+
+display:grid;
+
+grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+
+gap:25px;
+
+margin-top:40px;
+
+}
+
+.card{
+
+background:#111827;
+
+border:1px solid #1f2937;
+
+padding:25px;
+
+border-radius:10px;
+
+transition:0.3s;
+
+}
+
+.card:hover{
+
+transform:translateY(-5px);
+
+border:1px solid #10b981;
+
+}
+
+.card h3{
+
+margin-bottom:10px;
+
+}
+
+.highlight{
+
+background:#020617;
+
+border-left:4px solid #10b981;
+
+padding:20px;
+
+margin:40px 0;
+
+}
+
+.featureBox{
+
+background:#020617;
+
+padding:30px;
+
+border-radius:10px;
+
+margin-top:30px;
+
+}
+
+.featureBox ul{
+
+margin-left:20px;
+
+color:#cbd5e1;
+
+}
+
+.badge{
+
+background:#10b981;
+
+padding:6px 12px;
+
+border-radius:6px;
+
+color:black;
+
+font-weight:bold;
+
+display:inline-block;
+
+margin-top:10px;
+
+}
+
+</style>
+
 </head>
 
 <body>
 
 <header>
-  <a href="landing.html">← Back to Home</a>
+
+<a href="landing.html">← Back to System</a>
+
 </header>
 
 <section>
-  <h1>How Our Fraud Detection System Works</h1>
 
-  <p>
-    Our system is designed to detect **real payment fraud in real time** using
-    **actual user behavior**, not fake inputs or manual selections.
-    The goal is to simulate how modern payment platforms like UPI, Stripe,
-    or card networks protect transactions.
-  </p>
+<h1>FinShield Fraud Detection Architecture</h1>
 
-  <h2>Core Idea</h2>
-  <p>
-    Fraud rarely happens in isolation. It leaves signals — device changes,
-    IP changes, unusual timing, and rapid transaction patterns.
-    Our platform captures these signals automatically and feeds them
-    into a trained Machine Learning model.
-  </p>
+<p>
 
-  <div class="highlight">
-    <strong>No manual selection.</strong><br>
-    IP address, device information, session timing, and transaction frequency
-    are captured automatically at payment time.
-  </div>
+FinShield is an explainable fraud detection system that analyzes
+transaction behavior, device identity, login patterns and risk signals
+to detect fraudulent financial activity in real time.
 
-  <h2>End-to-End Flow</h2>
+</p>
 
-  <div class="flow">
-    <div class="card">
-      <h3>1. User Authentication</h3>
-      <p>
-        Users register and log in using Firebase Authentication.
-        Each user has a unique identity that persists across sessions.
-      </p>
-    </div>
+<h2>System Workflow</h2>
 
-    <div class="card">
-      <h3>2. Real-Time Data Capture</h3>
-      <p>
-        When a payment is attempted, the backend automatically captures:
-        IP address, device fingerprint (User-Agent), timestamp,
-        and session activity.
-      </p>
-    </div>
+<div class="flow">
 
-    <div class="card">
-      <h3>3. Risk Signal Generation</h3>
-      <p>
-        The backend compares current session data with historical user data
-        stored in the database to detect changes or anomalies.
-      </p>
-    </div>
+<div class="card">
 
-    <div class="card">
-      <h3>4. Machine Learning Decision</h3>
-      <p>
-        A trained Random Forest model evaluates the risk signals
-        and classifies the transaction as <strong>Normal</strong> or <strong>Fraud</strong>.
-      </p>
-    </div>
+<h3>User Authentication</h3>
 
-    <div class="card">
-      <h3>5. Action</h3>
-      <p>
-        Normal transactions are allowed instantly.
-        Fraudulent transactions are blocked and explained to the user.
-      </p>
-    </div>
-  </div>
+<p>
 
-  <h2>What Makes This Realistic</h2>
+Users login through Firebase authentication.
+Each transaction is tied to a verified identity.
 
-  <p>
-    Unlike demo projects that let users choose “Suspicious IP” or “Bad Device”,
-    our system works the way real payment systems do:
-  </p>
+</p>
 
-  <ul style="color:#ccc; margin-left:20px; margin-bottom:40px;">
-    <li>IP changes detected automatically</li>
-    <li>Device changes detected across sessions</li>
-    <li>Transaction frequency tracked per user</li>
-    <li>Time-based anomaly detection (late night transactions)</li>
-    <li>ML model isolated from raw identifiers</li>
-  </ul>
+</div>
 
-  <h2>Why This Architecture Matters</h2>
-  <p>
-    Raw identifiers like IPs and device strings are unstable and high-cardinality.
-    Our design converts them into stable, explainable risk features before
-    passing them to the ML model — exactly how production fraud pipelines work.
-  </p>
 
-  <div class="highlight">
-    Backend rules extract risk → ML decides → system acts.
-    <br>This separation keeps the model explainable and scalable.
-  </div>
+<div class="card">
 
-  <h2>Who This Is For</h2>
-  <p>
-    This project is designed for real-world fintech scenarios:
-    UPI apps, payment gateways, e-commerce checkout systems,
-    and internal fraud monitoring dashboards.
-  </p>
+<h3>Evidence Collection</h3>
 
-  
+<p>
+
+System automatically captures:
+
+IP Address  
+Device fingerprint  
+Transaction timing  
+Behavior patterns  
+
+</p>
+
+</div>
+
+
+<div class="card">
+
+<h3>Feature Engineering</h3>
+
+<p>
+
+Raw data is converted into ML features:
+
+IP change flag  
+Device change flag  
+Transaction velocity  
+Behavior deviation  
+
+</p>
+
+</div>
+
+
+<div class="card">
+
+<h3>ML Risk Prediction</h3>
+
+<p>
+
+Random Forest model calculates fraud probability
+using 10 behavioral features.
+
+</p>
+
+</div>
+
+
+<div class="card">
+
+<h3>Explainable Output</h3>
+
+<p>
+
+System shows:
+
+Risk score  
+Evidence data  
+Risk factors  
+Safe factors  
+
+</p>
+
+</div>
+
+</div>
+
+
+<h2>Risk Indicators Used</h2>
+
+<div class="featureBox">
+
+<ul>
+
+<li>IP address change</li>
+
+<li>Device fingerprint change</li>
+
+<li>Transaction time anomaly</li>
+
+<li>Transaction frequency spike</li>
+
+<li>Account age risk</li>
+
+<li>Failed login attempts</li>
+
+<li>Transaction pattern deviation</li>
+
+<li>Amount anomaly detection</li>
+
+</ul>
+
+</div>
+
+
+<h2>Why This System Is Realistic</h2>
+
+<p>
+
+Unlike basic academic demos, FinShield does not rely on
+manual fraud flags. It uses automatic behavioral analysis
+similar to real banking fraud detection engines.
+
+</p>
+
+<div class="highlight">
+
+Behavior signals → Risk features → ML prediction → Explainable decision
+
+</div>
+
+
+<h2>Technology Stack</h2>
+
+<div class="featureBox">
+
+<ul>
+
+<li>FastAPI backend</li>
+
+<li>Firebase authentication</li>
+
+<li>Firestore database</li>
+
+<li>Random Forest ML model</li>
+
+<li>Explainable fraud scoring UI</li>
+
+<li>Behavior risk analysis engine</li>
+
+</ul>
+
+</div>
+
+
+<h2>System Output</h2>
+
+<p>
+
+Each transaction produces:
+
+</p>
+
+<div class="featureBox">
+
+<ul>
+
+<li>Fraud / Normal decision</li>
+
+<li>Risk percentage</li>
+
+<li>Risk severity level</li>
+
+<li>Behavior evidence</li>
+
+<li>Safe indicators</li>
+
+<li>Fraud reasoning</li>
+
+</ul>
+
+</div>
+
+<div style="margin-top:50px">
+
+<span class="badge">
+
+Explainable AI Fraud Detection
+
+</span>
+
+</div>
 
 </section>
 
 </body>
+
 </html>

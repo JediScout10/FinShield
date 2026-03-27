@@ -96,7 +96,6 @@
   .panel-left h2 strong { font-weight: 800; }
   .panel-left p { font-size: 15px; color: rgba(255,255,255,.55); line-height: 1.7; max-width: 380px; margin-bottom: 48px; }
   .stat-row { display: flex; gap: 32px; }
-  .stat { }
   .stat .val { font-family: 'Manrope', sans-serif; font-size: 28px; font-weight: 800; color: #fff; }
   .stat .lbl { font-size: 11px; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 2px; }
 
@@ -306,11 +305,29 @@
     email: sessionStorage.getItem('fs_email')
   });
 
-  // ── On page load: if already logged in, go to dashboard ──
+  // ── On page load: if already logged in, show session state visibly ──
+  // Rather than silently redirecting (which looks like a bypass), surface
+  // the signed-in email and give the user an explicit choice.
   window.addEventListener('DOMContentLoaded', () => {
-    const { uid } = getSession();
-    if (uid) window.location.href = '/app';
+    const { uid, email } = getSession();
+    if (!uid) return;
+
+    // Show the existing session above the form
+    const alertBox = document.getElementById('alertBox');
+    alertBox.className = 'alert success';
+    alertBox.innerHTML =
+      `Already signed in as <strong>${email || uid}</strong>. ` +
+      `<a href="/app" style="color:#14532d;font-weight:700;">Go to dashboard</a> &nbsp;|&nbsp; ` +
+      `<a href="#" style="color:#14532d;font-weight:700;" onclick="clearSessionAndStay();return false;">Sign out</a>`;
   });
+
+  // Clears session so the user can register/log in as someone else
+  function clearSessionAndStay() {
+    sessionStorage.removeItem('fs_uid');
+    sessionStorage.removeItem('fs_email');
+    document.getElementById('alertBox').className = 'alert';
+    document.getElementById('alertBox').innerHTML = '';
+  }
 
   // ── Tab switching ──
   function switchTab(tab) {
@@ -347,14 +364,13 @@
     btn.disabled = true; btn.innerText = 'Creating account…';
 
     try {
-      // Generate a UID for this demo (replace with Firebase Auth in production)
       const uid = genUID();
 
-      // Register user profile in Firestore via backend
+      // Send email + password to backend so the hash is stored in Firestore
       const res = await fetch('/register-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid, email })
+        body: JSON.stringify({ uid, email, password })
       });
 
       if (!res.ok) throw new Error('Registration failed on server.');
@@ -371,10 +387,9 @@
   }
 
   // ── LOGIN ──
-  // NOTE: This demo stores sessions client-side only (sessionStorage).
-  // In production, replace with Firebase Auth signInWithEmailAndPassword()
-  // and verify ID tokens server-side. The /login-failed and /login-success
-  // endpoints will then correctly update failed_attempts in Firestore.
+  // The /login endpoint handles password verification and failed_attempts
+  // tracking in Firestore. On wrong password it returns the current attempt
+  // count so we can display "Attempt X of 3" and lock the button at limit.
 
   async function doLogin() {
     const email    = document.getElementById('loginEmail').value.trim();
@@ -386,10 +401,7 @@
     btn.disabled = true; btn.innerText = 'Signing in…';
 
     try {
-      // ── Look up user by email from Firestore (via a backend endpoint) ──
-      // In a real Firebase project: use Firebase Auth SDK here.
-      // For this demo we do a simple credential check via the /login endpoint.
-      const res = await fetch('/login', {
+      const res  = await fetch('/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -397,17 +409,24 @@
 
       const data = await res.json();
 
-      if (!res.ok || !data.success) {
-        // ── FIX: Call /login-failed to increment failed_attempts in Firestore ──
-        await fetch('/login-failed', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email })
-        });
-        throw new Error(data.message || 'Invalid credentials.');
+      if (!data.success) {
+        // Show the server's message (includes attempt count or lockout notice)
+        showAlert(data.message || 'Invalid credentials.');
+
+        if (data.locked) {
+          // Account is locked — disable the button permanently for this session
+          btn.disabled = true;
+          btn.innerText = '🔒 Account Locked';
+          btn.style.background = 'var(--error)';
+          document.getElementById('loginPassword').disabled = true;
+        } else {
+          btn.disabled = false;
+          btn.innerText = 'Sign In';
+        }
+        return;
       }
 
-      // ── FIX: Call /login-success to reset failed_attempts ──
+      // Success — notify server to clear the counter, then redirect
       await fetch('/login-success', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -420,8 +439,8 @@
 
     } catch (e) {
       showAlert(e.message || 'Login failed. Please try again.');
-    } finally {
-      btn.disabled = false; btn.innerText = 'Sign In';
+      btn.disabled = false;
+      btn.innerText = 'Sign In';
     }
   }
 
