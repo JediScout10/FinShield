@@ -2,16 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Fraud Detection Platform</title>
+  <title>FinShield | The New Standard in Fraud Detection</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <style>
-    /* RESET */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     body, html {
       width: 100%;
@@ -22,7 +16,7 @@
       overflow: hidden;
     }
 
-    /* NAVBAR */
+    /* ── NAVBAR ── */
     .navbar {
       position: fixed;
       top: 0;
@@ -34,13 +28,11 @@
       z-index: 10;
       background: rgba(0, 0, 0, 0.2);
     }
-
     .logo {
       font-size: 20px;
       font-weight: 600;
       letter-spacing: 2px;
     }
-
     .nav-links a {
       margin-left: 25px;
       text-decoration: none;
@@ -48,15 +40,9 @@
       font-size: 14px;
       transition: color 0.2s ease;
     }
+    .nav-links a:hover { color: #fff; }
 
-    .nav-links a:hover {
-      color: #fff;
-    }
-
-    .nav-links .login {
-      color: #ff6b6b;
-    }
-
+    /* FIX L1: Changed /app → /login so nav CTA actually goes to auth page */
     .nav-links .cta {
       border: 1px solid #fff;
       padding: 8px 14px;
@@ -64,13 +50,14 @@
       color: #fff;
     }
 
-    /* HERO */
+    /* ── HERO ── */
     .hero {
       position: relative;
       width: 100%;
       height: 100vh;
     }
 
+    /* FIX L2: Added poster attribute fallback for when video is missing/loading */
     .hero video {
       position: absolute;
       top: 50%;
@@ -84,11 +71,20 @@
       z-index: 1;
     }
 
+    /* FIX L2: Fallback background shown if video fails */
+    .hero-fallback {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #0d1b2a 0%, #1b2a4a 50%, #0d1b2a 100%);
+      z-index: 0;
+    }
+
     .overlay {
       position: absolute;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0, 0, 0, 0.65);
       z-index: 2;
     }
 
@@ -100,67 +96,73 @@
       top: 50%;
       transform: translateY(-50%);
     }
-
     .hero-content h1 {
       font-size: 68px;
       font-weight: 300;
       line-height: 1.1;
       margin-bottom: 30px;
     }
-
     .hero-content p {
       font-size: 18px;
       color: #ccc;
       max-width: 700px;
       margin-bottom: 45px;
+      line-height: 1.7;
     }
-
-    .hero-content .btn {
+    .hero-content .btn-group { display: flex; gap: 16px; align-items: center; }
+    .hero-content .btn-primary {
       display: inline-block;
       padding: 14px 30px;
       background: #e35b5b;
       color: #000;
       text-decoration: none;
-      font-weight: 600;
+      font-weight: 700;
       border-radius: 4px;
+      transition: opacity .2s;
     }
+    .hero-content .btn-primary:hover { opacity: .88; }
+    .hero-content .btn-secondary {
+      display: inline-block;
+      padding: 14px 30px;
+      border: 1px solid rgba(255,255,255,.4);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 500;
+      border-radius: 4px;
+      transition: border-color .2s;
+    }
+    .hero-content .btn-secondary:hover { border-color: #fff; }
 
-    /* RESPONSIVE */
+    /* ── RESPONSIVE ── */
     @media (max-width: 768px) {
-      .navbar {
-        padding: 20px;
-      }
-
-      .hero-content {
-        padding-left: 20px;
-        padding-right: 20px;
-      }
-
-      .hero-content h1 {
-        font-size: 42px;
-      }
-
-      .hero-content p {
-        font-size: 16px;
-      }
+      .navbar { padding: 20px; }
+      .hero-content { padding: 0 20px; }
+      .hero-content h1 { font-size: 42px; }
+      .hero-content p { font-size: 16px; }
+      .hero-content .btn-group { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
-
 <body>
 
   <!-- NAVBAR -->
   <div class="navbar">
     <div class="logo">FinShield</div>
     <div class="nav-links">
-      <a href="/app" class="cta">Login / Register</a>
+      <!-- FIX L3: Learn More now points to /learn, consistent with backend route -->
+      <a href="/learn">Learn More</a>
+      <!-- FIX L1: /login instead of /app so the CTA actually shows the auth page -->
+      <a href="/login" class="cta">Login / Register</a>
     </div>
   </div>
 
   <!-- HERO SECTION -->
   <section class="hero">
-    <!-- CHANGE VIDEO PATH IF NEEDED -->
-    <video autoplay muted loop playsinline>
+    <!-- FIX L2: poster attribute gives a solid frame while video loads;
+         fallback div shows if browser blocks autoplay or video is missing -->
+    <div class="hero-fallback"></div>
+    <video autoplay muted loop playsinline poster="/static/hero-poster.jpg"
+           onerror="this.style.display='none'">
       <source src="/static/hero-bg.mp4" type="video/mp4">
     </video>
 
@@ -169,10 +171,14 @@
     <div class="hero-content">
       <h1>The New Standard<br>in Fraud Detection</h1>
       <p>
-        Use real-time device fingerprinting, IP intelligence, session tracking
+        Real-time device fingerprinting, IP intelligence, session tracking
         and machine learning to protect digital payments instantly.
       </p>
-      <a href="/learn" class="btn">Learn More</a>
+      <div class="btn-group">
+        <!-- FIX L1: Primary CTA correctly routes to /login -->
+        <a href="/login" class="btn-primary">Get Started</a>
+        <a href="/learn" class="btn-secondary">Learn More →</a>
+      </div>
     </div>
   </section>
 
