@@ -104,7 +104,7 @@ def generate_explanations(
     risk = []
     safe = []
 
-    # ── 1. Amount Deviation (top feature: importance 0.2483) ──
+    # ── 1. Amount Deviation (feature importance #1: 0.2483) ──
     if amount_deviation >= 3.0:
         risk.append(
             f"Extreme spending spike: ₹{amount:,.0f} is {amount_deviation:.1f}× "
@@ -143,15 +143,13 @@ def generate_explanations(
             f"possible brute-force or account takeover"
         )
     elif failed_attempts >= 2:
-        risk.append(
-            f"Multiple authentication failures: {failed_attempts} failed attempts"
-        )
+        risk.append(f"Multiple authentication failures: {failed_attempts} failed attempts")
     elif failed_attempts == 1:
         risk.append("One prior failed login attempt on this account")
     else:
         safe.append("No failed authentication attempts — clean login history")
 
-    # ── 4. Malicious IP ──
+    # ── 4. IP Change ──
     if is_mal_ip:
         risk.append(
             f"IP address changed from last known location — "
@@ -223,8 +221,8 @@ def generate_explanations(
         safe.append("Transaction during normal business hours")
 
     # ── Black Box Guarantee ──
-    # If model scores > 50% but no single rule fired, surface the combination
-    if prob > 0.50 and len(risk) == 0:
+    # If model scores >0.25 (Review threshold) but no risk rule fired
+    if prob > 0.25 and len(risk) == 0:
         risk.append(
             f"Combined risk profile: {prob*100:.0f}% fraud probability from "
             f"multiple sub-threshold signals aligned together"
@@ -255,19 +253,20 @@ async def process_payment(payment: PaymentRequest, request: Request):
     user_doc = user_ref.get()
 
     if not user_doc.exists:
+        # Demo account — created on first payment attempt
         demo_country = get_location_from_ip(current_ip)
-        demo_created = (datetime.now() - timedelta(days=90)).isoformat()
+        demo_created = (datetime.now() - timedelta(days=0)).isoformat()
         user_data = {
             "email":           f"{payment.user_id}@demo.com",
-            "last_ip":         current_ip,
-            "last_device":     current_device,
-            "last_country":    demo_country,
-            "last_txn_time":   (datetime.now() - timedelta(hours=2)).isoformat(),
-            "txn_count_24h":   1,
+            "last_ip":         None,
+            "last_device":     None,
+            "last_country":    None,
+            "last_txn_time":   None,
+            "txn_count_24h":   0,
             "created_at":      demo_created,
             "failed_attempts": 0,
-            "avg_txn_amount":  payment.amount,
-            "total_txn_count": 5
+            "avg_txn_amount":  0,
+            "total_txn_count": 0
         }
         user_ref.set(user_data)
     else:
@@ -279,7 +278,7 @@ async def process_payment(payment: PaymentRequest, request: Request):
 
     detected_country = get_location_from_ip(current_ip)
 
-    is_mal_ip     = 1 if (last_ip     and current_ip     != last_ip)     else 0
+    is_mal_ip = 1 if (last_ip and current_ip != last_ip) else 0
     is_new_device = 1 if (last_device and current_device != last_device) else 0
     location_change = (
         1 if (last_country
@@ -304,24 +303,20 @@ async def process_payment(payment: PaymentRequest, request: Request):
     )
 
     failed_attempts = user_data.get("failed_attempts", 0)
-    avg_txn_amount  = user_data.get("avg_txn_amount", payment.amount) or payment.amount
 
-    # FIX: Compute amount_deviation — must use identical formula as train_model.py
-    # train: data['amount'] / data['avg_txn_amount']
-    # here:  payment.amount / avg_txn_amount
+    # avg_txn_amount: use stored value, or current amount if no history
+    prev_avg   = user_data.get("avg_txn_amount", 0) or 0
+    prev_count = user_data.get("total_txn_count", 0) or 0
+    avg_txn_amount = prev_avg if prev_count > 0 else payment.amount
+
+    # amount_deviation: must use identical formula as train_model.py
     amount_deviation = round(payment.amount / avg_txn_amount, 4)
 
     is_international = 1 if detected_country not in ("Demo Mode", "India") else 0
 
-    # ══════════════════════════════════════════════════════════════
-    # FIX: ml_input now includes amount_deviation to match FEATURES
-    # in train_model.py exactly. Key names and order must match.
-    # The model uses feature_names_in_ to validate — any mismatch
-    # causes a hard sklearn ValueError at prediction time.
-    # ══════════════════════════════════════════════════════════════
     ml_input = {
         "amount":           float(payment.amount),
-        "amount_deviation": float(amount_deviation),  # FIX: was missing
+        "amount_deviation": float(amount_deviation),
         "is_mal_ip":        int(is_mal_ip),
         "is_new_device":    int(is_new_device),
         "odd_time":         int(odd_time),
@@ -334,26 +329,25 @@ async def process_payment(payment: PaymentRequest, request: Request):
     }
 
     df   = pd.DataFrame([ml_input])
-    pred = model.predict(df)[0]
     prob = float(model.predict_proba(df)[0][1])
     probability_formatted = f"{prob * 100:.2f}"
 
-    # Sanity guard: suppress model noise for clearly minimal-risk transactions
-    if (payment.amount < 1000
-            and failed_attempts == 0
-            and location_change == 0
-            and txn_count_24h <= 5
-            and is_new_device == 0
-            and is_mal_ip == 0
-            and amount_deviation < 1.5):
-        if 0.70 < prob < 0.85:
-            prob = 0.69
-
-    if prob < 0.40:
+    # ══════════════════════════════════════════════════════════════
+    # FIX 1: CORRECTED THRESHOLDS
+    # The model uses class_weight="balanced" which shifts the
+    # probability distribution down. With balanced weights,
+    # the old 0.40 threshold caused legitimate Review cases
+    # (29% France IP-change) to fall into Normal.
+    # Calibrated thresholds from precision-recall analysis:
+    # <0.25  → Normal   (high precision for approved transactions)
+    # 0.25–0.60 → Review  (catches moderate-risk, investigates)
+    # >0.60  → Fraud    (high confidence fraud block)
+    # ══════════════════════════════════════════════════════════════
+    if prob < 0.25:
         prediction = "Normal"
         decision   = "Approved"
         risk_level = "Low"
-    elif prob <= 0.70:
+    elif prob <= 0.60:
         prediction = "Review Required"
         decision   = "Held for Review"
         risk_level = "Medium"
@@ -386,20 +380,51 @@ async def process_payment(payment: PaymentRequest, request: Request):
     print(f"Risk: {len(risk)}  Safe: {len(safe)}")
     print(f"-------------------------------\n")
 
-    prev_avg   = user_data.get("avg_txn_amount", 0) or 0
-    prev_count = user_data.get("total_txn_count", 0) or 0
-    new_count  = prev_count + 1
-    new_avg    = ((prev_avg * prev_count) + payment.amount) / new_count
+    # ══════════════════════════════════════════════════════════════
+    # FIX 2: CONDITIONAL FIRESTORE UPDATE — THE CORE BUG FIX
+    #
+    # ROOT CAUSE OF PROBLEM 1:
+    # The old code updated last_ip, last_device, last_country, and
+    # avg_txn_amount UNCONDITIONALLY after every transaction.
+    # This meant that after a single VPN/France transaction:
+    #   - last_ip  → France VPN IP  (now "trusted")
+    #   - last_country → France       (now "trusted")
+    #   - avg_txn_amount ↑ (inflated by high-amount fraud attempt)
+    # All subsequent VPN transactions then scored is_mal_ip=0,
+    # location_change=0, avg was higher → deviation lower.
+    # Result: probability dropped from 43%→29%→26%.
+    #
+    # FIX: Only update last_ip/last_device/last_country when the
+    # transaction is APPROVED (prediction = Normal). For Review and
+    # Blocked transactions, only update txn_count_24h and
+    # total_txn_count. avg_txn_amount is only updated for Approved.
+    # This ensures fraudulent activity cannot whittle down the
+    # baseline trust profile of an account.
+    # ══════════════════════════════════════════════════════════════
+    new_count = prev_count + 1
+    new_avg   = ((prev_avg * prev_count) + payment.amount) / new_count
 
-    user_ref.update({
-        "last_ip":         current_ip,
-        "last_device":     current_device,
-        "last_country":    detected_country,
-        "last_txn_time":   current_time.isoformat(),
-        "txn_count_24h":   txn_count_24h,
-        "avg_txn_amount":  round(new_avg, 2),
-        "total_txn_count": new_count
-    })
+    if prediction == "Normal":
+        # Approved: update full profile including trusted IP/device/location
+        user_ref.update({
+            "last_ip":         current_ip,
+            "last_device":     current_device,
+            "last_country":    detected_country,
+            "last_txn_time":   current_time.isoformat(),
+            "txn_count_24h":   txn_count_24h,
+            "avg_txn_amount":  round(new_avg, 2),
+            "total_txn_count": new_count
+        })
+    else:
+        # Review or Blocked: update only counters, NOT trust profile.
+        # last_ip, last_device, last_country remain as they were.
+        # avg_txn_amount is NOT updated — fraud amount does not
+        # inflate the baseline spending average.
+        user_ref.update({
+            "last_txn_time":   current_time.isoformat(),
+            "txn_count_24h":   txn_count_24h,
+            "total_txn_count": new_count
+        })
 
     return {
         "prediction":  prediction,
@@ -425,6 +450,9 @@ async def process_payment(payment: PaymentRequest, request: Request):
 
 @app.post("/register-user")
 async def register_user(data: RegisterUser):
+    # Stores document keyed by Firebase UID.
+    # index.html sends uid from sessionStorage 'fs_uid' which is set
+    # by login.html after Firebase Auth returns the user object.
     user_ref = db.collection("users").document(data.uid)
     user_ref.set({
         "email":           data.email,
@@ -443,7 +471,12 @@ async def register_user(data: RegisterUser):
 
 @app.post("/login-failed")
 async def login_failed(data: LoginFailed):
-    users_ref = db.collection("users").where("email", "==", data.email).limit(1).stream()
+    # FIX: Use filter() not where() for Firestore v2+ SDK compatibility
+    users_ref = db.collection("users").where(
+        filter=firestore.And([
+            firestore.FieldFilter("email", "==", data.email)
+        ])
+    ).limit(1).stream()
     for user_doc in users_ref:
         user_doc.reference.update({
             "failed_attempts": user_doc.to_dict().get("failed_attempts", 0) + 1

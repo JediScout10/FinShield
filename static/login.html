@@ -1,455 +1,244 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>FinShield | Sign In</title>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&family=Public+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Public+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --primary: #4C6EF5;
-    --error:   #9f403d;
-    --surface: #f8f9fa;
-    --bg:      #E6ECF2;
-    --text:    #2b3437;
-    --muted:   #586064;
-    --border:  #abb3b7;
-  }
-
-  body {
-    font-family: 'Public Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* ── HEADER ── */
-  header {
-    padding: 22px 48px;
-    background: var(--surface);
-    border-bottom: 1px solid #dce5ef;
-    display: flex;
-    align-items: baseline;
-    gap: 14px;
-    box-shadow: 0 4px 16px rgba(43,52,55,.05);
-  }
-  header h1 { font-family: 'Manrope', sans-serif; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
-  header span { font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--primary); }
-
-  /* ── MAIN LAYOUT ── */
-  main {
-    flex: 1;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    min-height: calc(100vh - 73px);
-  }
-
-  /* Left decorative panel */
-  .panel-left {
-    background: linear-gradient(145deg, #1a2f5a 0%, #2d4a8a 50%, #1e3a6e 100%);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 64px 56px;
-    position: relative;
-    overflow: hidden;
-  }
-  .panel-left::before {
-    content: '';
-    position: absolute;
-    width: 400px; height: 400px;
-    border: 1px solid rgba(255,255,255,.06);
-    border-radius: 50%;
-    top: -80px; right: -80px;
-  }
-  .panel-left::after {
-    content: '';
-    position: absolute;
-    width: 280px; height: 280px;
-    border: 1px solid rgba(255,255,255,.04);
-    border-radius: 50%;
-    bottom: 40px; left: -60px;
-  }
-  .panel-left .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(255,255,255,.08);
-    border: 1px solid rgba(255,255,255,.12);
-    border-radius: 100px;
-    padding: 6px 14px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: rgba(255,255,255,.7);
-    margin-bottom: 32px;
-    width: fit-content;
-  }
-  .panel-left .dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:.4; } }
-  .panel-left h2 { font-family: 'Manrope', sans-serif; font-size: 40px; font-weight: 300; line-height: 1.2; color: #fff; margin-bottom: 20px; }
-  .panel-left h2 strong { font-weight: 800; }
-  .panel-left p { font-size: 15px; color: rgba(255,255,255,.55); line-height: 1.7; max-width: 380px; margin-bottom: 48px; }
-  .stat-row { display: flex; gap: 32px; }
-  .stat .val { font-family: 'Manrope', sans-serif; font-size: 28px; font-weight: 800; color: #fff; }
-  .stat .lbl { font-size: 11px; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 2px; }
-
-  /* Right auth panel */
-  .panel-right {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 48px 32px;
-  }
-  .auth-card {
-    width: 100%;
-    max-width: 420px;
-  }
-
-  /* Tabs */
-  .tabs {
-    display: flex;
-    border-bottom: 2px solid #dce5ef;
-    margin-bottom: 36px;
-  }
-  .tab-btn {
-    flex: 1;
-    padding: 12px;
-    background: none;
-    border: none;
-    font-family: 'Public Sans', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--muted);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-    transition: all .2s;
-  }
-  .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
-
-  /* Form */
-  .form-section { display: none; }
-  .form-section.active { display: block; }
-
-  .form-group { margin-bottom: 20px; }
-  .form-group label {
-    display: block;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 8px;
-  }
-  .form-group input {
-    width: 100%;
-    background: #CCD8E5;
-    border: none;
-    border-left: 2px solid transparent;
-    padding: 13px 16px;
-    font-family: 'Public Sans', sans-serif;
-    font-size: 14px;
-    color: var(--text);
-    transition: border-color .2s;
-    outline: none;
-  }
-  .form-group input:focus { border-left-color: var(--primary); }
-
-  .btn-primary {
-    width: 100%;
-    padding: 15px;
-    background: var(--primary);
-    color: #fff;
-    border: none;
-    font-family: 'Public Sans', sans-serif;
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    cursor: pointer;
-    border-radius: 4px;
-    margin-top: 8px;
-    transition: opacity .2s, transform .1s;
-  }
-  .btn-primary:hover { opacity: .92; }
-  .btn-primary:active { transform: scale(.99); }
-  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-
-  .divider { text-align: center; font-size: 12px; color: var(--muted); margin: 20px 0; position: relative; }
-  .divider::before, .divider::after {
-    content: ''; position: absolute; top: 50%; width: 38%; height: 1px; background: #dce5ef;
-  }
-  .divider::before { left: 0; } .divider::after { right: 0; }
-
-  /* Alert banner */
-  .alert {
-    padding: 12px 16px;
-    border-radius: 4px;
-    font-size: 13px;
-    font-weight: 500;
-    margin-bottom: 20px;
-    display: none;
-  }
-  .alert.error { background: #fee2e2; color: #7f1d1d; border-left: 3px solid var(--error); display: block; }
-  .alert.success { background: #dcfce7; color: #14532d; border-left: 3px solid #16a34a; display: block; }
-
-  .footnote { font-size: 12px; color: var(--muted); text-align: center; margin-top: 28px; line-height: 1.6; }
-  .footnote a { color: var(--primary); text-decoration: none; }
-
-  @media (max-width: 768px) {
-    main { grid-template-columns: 1fr; }
-    .panel-left { display: none; }
-  }
+  body { font-family: 'Public Sans', sans-serif; background-color: #E6ECF2; color: #2b3437; }
 </style>
 </head>
-<body>
+<body class="min-h-screen flex items-center justify-center px-4">
 
-<header>
-  <h1>FinShield</h1>
-  <span>Fraud Detection ML System</span>
-</header>
+<div class="w-full max-w-md">
 
-<main>
-  <!-- ── LEFT PANEL ── -->
-  <div class="panel-left">
-    <div class="badge"><div class="dot"></div> System Active</div>
-    <h2>Real-time<br>Fraud <strong>Intelligence</strong></h2>
-    <p>Device fingerprinting, IP geolocation, behavioral analytics and machine learning — unified in one system.</p>
-    <div class="stat-row">
-      <div class="stat"><div class="val">0.922</div><div class="lbl">Model AUC</div></div>
-      <div class="stat"><div class="val">7.3%</div><div class="lbl">Fraud Rate</div></div>
-      <div class="stat"><div class="val">23</div><div class="lbl">Features</div></div>
-    </div>
+  <!-- Header -->
+  <div class="text-center mb-10">
+    <h1 class="text-3xl font-extrabold tracking-tighter text-[#2b3437] font-['Manrope']">FinShield</h1>
+    <p class="text-sm font-semibold uppercase tracking-widest text-[#4C6EF5] mt-1">Fraud Detection ML System</p>
   </div>
 
-  <!-- ── RIGHT PANEL ── -->
-  <div class="panel-right">
-    <div class="auth-card">
+  <!-- Card -->
+  <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
 
-      <div style="margin-bottom:32px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Account Access</div>
-        <div style="font-family:'Manrope',sans-serif;font-size:28px;font-weight:800;" id="cardTitle">Welcome back</div>
-      </div>
-
-      <!-- TABS -->
-      <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('login')">Sign In</button>
-        <button class="tab-btn" onclick="switchTab('register')">Register</button>
-      </div>
-
-      <!-- ALERT -->
-      <div class="alert" id="alertBox"></div>
-
-      <!-- ── LOGIN FORM ── -->
-      <div class="form-section active" id="form-login">
-        <div class="form-group">
-          <label>Email Address</label>
-          <input id="loginEmail" type="email" placeholder="you@example.com" autocomplete="email"/>
-        </div>
-        <div class="form-group">
-          <label>Password</label>
-          <input id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password"/>
-        </div>
-        <button class="btn-primary" id="loginBtn" onclick="doLogin()">Sign In</button>
-        <p class="footnote">Don't have an account? <a href="#" onclick="switchTab('register');return false;">Register here</a></p>
-      </div>
-
-      <!-- ── REGISTER FORM ── -->
-      <div class="form-section" id="form-register">
-        <div class="form-group">
-          <label>Full Name</label>
-          <input id="regName" type="text" placeholder="John Doe"/>
-        </div>
-        <div class="form-group">
-          <label>Email Address</label>
-          <input id="regEmail" type="email" placeholder="you@example.com" autocomplete="email"/>
-        </div>
-        <div class="form-group">
-          <label>Password</label>
-          <input id="regPassword" type="password" placeholder="Min. 8 characters" autocomplete="new-password"/>
-        </div>
-        <div class="form-group">
-          <label>Confirm Password</label>
-          <input id="regConfirm" type="password" placeholder="Repeat password"/>
-        </div>
-        <button class="btn-primary" id="registerBtn" onclick="doRegister()">Create Account</button>
-        <p class="footnote">Already have an account? <a href="#" onclick="switchTab('login');return false;">Sign in</a></p>
-      </div>
-
+    <!-- Tabs -->
+    <div class="flex border-b border-gray-200 mb-8">
+      <button id="tabLogin"
+        onclick="showTab('login')"
+        class="flex-1 pb-3 text-sm font-bold uppercase tracking-widest border-b-2 border-[#4C6EF5] text-[#4C6EF5] transition-colors">
+        Sign In
+      </button>
+      <button id="tabRegister"
+        onclick="showTab('register')"
+        class="flex-1 pb-3 text-sm font-bold uppercase tracking-widest border-b-2 border-transparent text-gray-400 transition-colors">
+        Register
+      </button>
     </div>
+
+    <!-- Error / Success message -->
+    <div id="msgBox" class="hidden mb-6 px-4 py-3 rounded-lg text-sm font-semibold"></div>
+
+    <!-- LOGIN FORM -->
+    <div id="formLogin">
+      <div class="space-y-5">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Email</label>
+          <input id="loginEmail" type="email" placeholder="you@example.com"
+            class="w-full bg-[#EDF2F7] border-none rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#4C6EF5]"/>
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Password</label>
+          <input id="loginPassword" type="password" placeholder="••••••••"
+            class="w-full bg-[#EDF2F7] border-none rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#4C6EF5]"/>
+        </div>
+        <button onclick="doLogin()"
+          class="w-full py-3 bg-[#4C6EF5] text-white font-bold rounded-lg text-sm uppercase tracking-widest hover:bg-[#3B5BDB] active:scale-[0.98] transition-all mt-2">
+          Sign In
+        </button>
+      </div>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div id="formRegister" class="hidden">
+      <div class="space-y-5">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Email</label>
+          <input id="regEmail" type="email" placeholder="you@example.com"
+            class="w-full bg-[#EDF2F7] border-none rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#4C6EF5]"/>
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Password</label>
+          <input id="regPassword" type="password" placeholder="Min. 6 characters"
+            class="w-full bg-[#EDF2F7] border-none rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#4C6EF5]"/>
+        </div>
+        <button onclick="doRegister()"
+          class="w-full py-3 bg-[#4C6EF5] text-white font-bold rounded-lg text-sm uppercase tracking-widest hover:bg-[#3B5BDB] active:scale-[0.98] transition-all mt-2">
+          Create Account
+        </button>
+      </div>
+    </div>
+
   </div>
-</main>
+</div>
 
 <script>
-  // ── Firebase SDK (replace config with your project) ──
-  // NOTE: In production, load Firebase via npm/CDN and use env vars for config.
-  // This demo uses the REST API directly so no SDK import is needed for basic auth.
+// ══════════════════════════════════════════════════════════════
+// FIREBASE CONFIG — replace all YOUR_* values with your actual
+// Firebase project credentials from Firebase Console →
+// Project Settings → Your apps → Web app → Config
+// ══════════════════════════════════════════════════════════════
+const firebaseConfig = {
+    apiKey:            "YOUR_API_KEY",
+    authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId:         "YOUR_PROJECT_ID",
+    storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId:             "YOUR_APP_ID"
+};
 
-  // ── Simple UID generator (mirrors Firebase UID format for demo) ──
-  const genUID = () => 'uid_' + Math.random().toString(36).slice(2, 11);
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
 
-  // ── Session helpers ──
-  const saveSession = (uid, email) => {
-    sessionStorage.setItem('fs_uid', uid);
-    sessionStorage.setItem('fs_email', email);
-  };
-  const getSession = () => ({
-    uid: sessionStorage.getItem('fs_uid'),
-    email: sessionStorage.getItem('fs_email')
-  });
+// ── Tab switching ──
+function showTab(tab) {
+    const isLogin = tab === 'login';
+    document.getElementById('formLogin').classList.toggle('hidden', !isLogin);
+    document.getElementById('formRegister').classList.toggle('hidden', isLogin);
+    document.getElementById('tabLogin').classList.toggle('border-[#4C6EF5]', isLogin);
+    document.getElementById('tabLogin').classList.toggle('text-[#4C6EF5]', isLogin);
+    document.getElementById('tabLogin').classList.toggle('border-transparent', !isLogin);
+    document.getElementById('tabLogin').classList.toggle('text-gray-400', !isLogin);
+    document.getElementById('tabRegister').classList.toggle('border-[#4C6EF5]', !isLogin);
+    document.getElementById('tabRegister').classList.toggle('text-[#4C6EF5]', !isLogin);
+    document.getElementById('tabRegister').classList.toggle('border-transparent', isLogin);
+    document.getElementById('tabRegister').classList.toggle('text-gray-400', isLogin);
+    hideMsg();
+}
 
-  // ── On page load: if already logged in, show session state visibly ──
-  // Rather than silently redirecting (which looks like a bypass), surface
-  // the signed-in email and give the user an explicit choice.
-  window.addEventListener('DOMContentLoaded', () => {
-    const { uid, email } = getSession();
-    if (!uid) return;
+function showMsg(text, isError) {
+    const box = document.getElementById('msgBox');
+    box.textContent = text;
+    box.className = `mb-6 px-4 py-3 rounded-lg text-sm font-semibold ${
+        isError ? 'bg-red-50 text-red-700 border border-red-200'
+                : 'bg-green-50 text-green-700 border border-green-200'
+    }`;
+    box.classList.remove('hidden');
+}
+function hideMsg() {
+    document.getElementById('msgBox').classList.add('hidden');
+}
 
-    // Show the existing session above the form
-    const alertBox = document.getElementById('alertBox');
-    alertBox.className = 'alert success';
-    alertBox.innerHTML =
-      `Already signed in as <strong>${email || uid}</strong>. ` +
-      `<a href="/app" style="color:#14532d;font-weight:700;">Go to dashboard</a> &nbsp;|&nbsp; ` +
-      `<a href="#" style="color:#14532d;font-weight:700;" onclick="clearSessionAndStay();return false;">Sign out</a>`;
-  });
-
-  // Clears session so the user can register/log in as someone else
-  function clearSessionAndStay() {
-    sessionStorage.removeItem('fs_uid');
-    sessionStorage.removeItem('fs_email');
-    document.getElementById('alertBox').className = 'alert';
-    document.getElementById('alertBox').innerHTML = '';
-  }
-
-  // ── Tab switching ──
-  function switchTab(tab) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.form-section').forEach(f => f.classList.remove('active'));
-    document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
-    document.getElementById(`form-${tab}`).classList.add('active');
-    document.getElementById('cardTitle').innerText = tab === 'login' ? 'Welcome back' : 'Create account';
-    hideAlert();
-  }
-
-  // ── Alert helpers ──
-  function showAlert(msg, type = 'error') {
-    const el = document.getElementById('alertBox');
-    el.className = `alert ${type}`;
-    el.innerText = msg;
-  }
-  function hideAlert() {
-    document.getElementById('alertBox').className = 'alert';
-  }
-
-  // ── REGISTER ──
-  async function doRegister() {
-    const name     = document.getElementById('regName').value.trim();
-    const email    = document.getElementById('regEmail').value.trim();
-    const password = document.getElementById('regPassword').value;
-    const confirm  = document.getElementById('regConfirm').value;
-
-    if (!name || !email || !password) return showAlert('All fields are required.');
-    if (password.length < 8) return showAlert('Password must be at least 8 characters.');
-    if (password !== confirm) return showAlert('Passwords do not match.');
-
-    const btn = document.getElementById('registerBtn');
-    btn.disabled = true; btn.innerText = 'Creating account…';
-
-    try {
-      const uid = genUID();
-
-      // Send email + password to backend so the hash is stored in Firestore
-      const res = await fetch('/register-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid, email, password })
-      });
-
-      if (!res.ok) throw new Error('Registration failed on server.');
-
-      saveSession(uid, email);
-      showAlert('Account created! Redirecting…', 'success');
-      setTimeout(() => window.location.href = '/app', 1200);
-
-    } catch (e) {
-      showAlert('Registration error: ' + e.message);
-    } finally {
-      btn.disabled = false; btn.innerText = 'Create Account';
-    }
-  }
-
-  // ── LOGIN ──
-  // The /login endpoint handles password verification and failed_attempts
-  // tracking in Firestore. On wrong password it returns the current attempt
-  // count so we can display "Attempt X of 3" and lock the button at limit.
-
-  async function doLogin() {
+// ══════════════════════════════════════════════════════════════
+// LOGIN
+// Flow: Firebase Auth → get UID → call /login-success (resets
+// failed_attempts in Firestore) → store UID+email in
+// sessionStorage → redirect to /app
+// ══════════════════════════════════════════════════════════════
+async function doLogin() {
     const email    = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
 
-    if (!email || !password) return showAlert('Please enter your email and password.');
-
-    const btn = document.getElementById('loginBtn');
-    btn.disabled = true; btn.innerText = 'Signing in…';
+    if (!email || !password) {
+        showMsg('Please enter email and password.', true);
+        return;
+    }
 
     try {
-      const res  = await fetch('/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
+        const cred = await auth.signInWithEmailAndPassword(email, password);
+        const uid  = cred.user.uid;
 
-      const data = await res.json();
+        // Reset failed_attempts in Firestore on successful login
+        await fetch('/login-success', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ uid, email })
+        });
 
-      if (!data.success) {
-        // Show the server's message (includes attempt count or lockout notice)
-        showAlert(data.message || 'Invalid credentials.');
+        // Store UID in sessionStorage — index.html reads this as payment user_id
+        sessionStorage.setItem('fs_uid',   uid);
+        sessionStorage.setItem('fs_email', email);
 
-        if (data.locked) {
-          // Account is locked — disable the button permanently for this session
-          btn.disabled = true;
-          btn.innerText = '🔒 Account Locked';
-          btn.style.background = 'var(--error)';
-          document.getElementById('loginPassword').disabled = true;
-        } else {
-          btn.disabled = false;
-          btn.innerText = 'Sign In';
-        }
-        return;
-      }
+        window.location.replace('/app');
 
-      // Success — notify server to clear the counter, then redirect
-      await fetch('/login-success', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uid: data.uid, email })
-      });
+    } catch (err) {
+        // Increment failed_attempts counter in Firestore
+        await fetch('/login-failed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        }).catch(() => {}); // non-blocking — don't let this crash the error display
 
-      saveSession(data.uid, email);
-      showAlert('Login successful! Redirecting…', 'success');
-      setTimeout(() => window.location.href = '/app', 1000);
-
-    } catch (e) {
-      showAlert(e.message || 'Login failed. Please try again.');
-      btn.disabled = false;
-      btn.innerText = 'Sign In';
+        // Show human-readable Firebase error
+        let msg = 'Login failed. Please check your credentials.';
+        if (err.code === 'auth/user-not-found')   msg = 'No account found with this email.';
+        if (err.code === 'auth/wrong-password')   msg = 'Incorrect password. Please try again.';
+        if (err.code === 'auth/invalid-email')    msg = 'Invalid email address format.';
+        if (err.code === 'auth/too-many-requests') msg = 'Too many failed attempts. Try again later.';
+        if (err.code === 'auth/api-key-not-valid') msg = 'Firebase not configured. Update firebaseConfig in login.html.';
+        showMsg(msg, true);
     }
-  }
+}
 
-  // Enter key support
-  document.addEventListener('keydown', e => {
-    if (e.key !== 'Enter') return;
-    if (document.getElementById('form-login').classList.contains('active')) doLogin();
-    else doRegister();
-  });
+// ══════════════════════════════════════════════════════════════
+// REGISTER
+// Flow: Firebase Auth createUser → call /register-user to create
+// Firestore document keyed by UID → store in sessionStorage →
+// redirect to /app
+// ══════════════════════════════════════════════════════════════
+async function doRegister() {
+    const email    = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPassword').value;
+
+    if (!email || !password) {
+        showMsg('Please enter email and password.', true);
+        return;
+    }
+    if (password.length < 6) {
+        showMsg('Password must be at least 6 characters.', true);
+        return;
+    }
+
+    try {
+        const cred = await auth.createUserWithEmailAndPassword(email, password);
+        const uid  = cred.user.uid;
+
+        // Create Firestore user document
+        const resp = await fetch('/register-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ uid, email })
+        });
+
+        if (!resp.ok) throw new Error('Firestore registration failed');
+
+        // Store session and redirect
+        sessionStorage.setItem('fs_uid',   uid);
+        sessionStorage.setItem('fs_email', email);
+
+        window.location.replace('/app');
+
+    } catch (err) {
+        let msg = 'Registration failed.';
+        if (err.code === 'auth/email-already-in-use') msg = 'An account with this email already exists.';
+        if (err.code === 'auth/weak-password')        msg = 'Password is too weak.';
+        if (err.code === 'auth/invalid-email')        msg = 'Invalid email address format.';
+        if (err.code === 'auth/api-key-not-valid')    msg = 'Firebase not configured. Update firebaseConfig in login.html.';
+        showMsg(msg, true);
+    }
+}
+
+// Allow Enter key to submit
+document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+        const loginVisible = !document.getElementById('formLogin').classList.contains('hidden');
+        if (loginVisible) doLogin(); else doRegister();
+    }
+});
 </script>
+
 </body>
 </html>

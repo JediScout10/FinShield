@@ -333,20 +333,33 @@
         }
     }
 
-    // Capture standard device fingerprint
+    // FIX: Corrected device fingerprint detection.
+    // Brave and Edge must be checked BEFORE Chrome because their
+    // userAgent strings contain 'Chrome'. Android must be checked
+    // before Linux because Android UA contains 'Linux'.
     function getDevice() {
         const ua = navigator.userAgent;
-        let b = "Unknown", o = "Desktop";
-        if (ua.includes('Chrome')) b = "Chrome";
-        else if (ua.includes('Firefox')) b = "Firefox";
-        else if (ua.includes('Safari') && !ua.includes('Chrome')) b = "Safari";
-        else if (ua.includes('Edg')) b = "Edge";
 
-        if (ua.includes('Win')) o = "Windows";
-        else if (ua.includes('Mac')) o = "MacOS";
-        else if (ua.includes('Linux')) o = "Linux";
-        else if (ua.includes('Android')) o = "Android";
-        else if (ua.includes('like Mac')) o = "iOS";
+        // OS — specific before generic
+        let o = "Unknown";
+        if (/Android/.test(ua))           o = "Android";
+        else if (/iPhone|iPad/.test(ua))  o = "iOS";
+        else if (/Win/.test(ua))          o = "Windows";
+        else if (/Mac/.test(ua))          o = "MacOS";
+        else if (/CrOS/.test(ua))         o = "ChromeOS";
+        else if (/Linux/.test(ua))        o = "Linux";
+
+        // Browser — specific before generic (Brave/Edge before Chrome)
+        let b = "Unknown";
+        if (/Brave/.test(ua))                       b = "Brave";
+        else if (/Edg\//.test(ua))                  b = "Edge";
+        else if (/OPR\/|Opera/.test(ua))            b = "Opera";
+        else if (/SamsungBrowser/.test(ua))         b = "Samsung";
+        else if (/YaBrowser/.test(ua))              b = "Yandex";
+        else if (/Firefox\//.test(ua))              b = "Firefox";
+        else if (/Chrome\//.test(ua))               b = "Chrome";
+        else if (/Safari\//.test(ua))               b = "Safari";
+
         return `${o} | ${b}`;
     }
 
@@ -364,9 +377,8 @@
         btnAnalyze.disabled = true;
 
         try {
-            // Use the real UID stored in sessionStorage during login/register.
-            // This ensures the /payment route reads the correct Firestore document.
-            const uid = _fsUid;
+            // Use the real Firebase UID from sessionStorage (set by login.html)
+            const uid    = _fsUid;
             const device = getDevice();
 
             // Pipeline simple animation
