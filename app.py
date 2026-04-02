@@ -85,20 +85,40 @@ def get_location_from_ip(ip: str) -> str:
 
 def generate_explanations(
     amount: float,
-    avg_txn_amount: float,
-    amount_deviation: float,
-    is_mal_ip: int,
-    is_new_device: int,
-    location_change: int,
-    is_international: int,
-    odd_time: int,
-    txn_count_24h: int,
-    account_age_days: int,
-    failed_attempts: int,
-    detected_country: str,
-    current_ip: str,
-    prob: float,
-    txn_type: str = "PAYMENT"
+
+ avg_txn_amount: float,
+
+ amount_deviation: float,
+
+ is_mal_ip: int,
+
+ is_new_device: int,
+
+ location_change: int,
+
+ is_international: int,
+
+ odd_time: int,
+
+ txn_count_24h: int,
+
+ txn_count_1h: int,
+
+ time_since_last_txn: int,
+
+ account_age_days: int,
+
+ failed_attempts: int,
+
+ is_proxy_ip: int,
+
+ detected_country: str,
+
+ current_ip: str,
+
+ prob: float,
+
+ txn_type: str="PAYMENT"
 ) -> tuple[list, list]:
 
     risk = []
@@ -219,7 +239,43 @@ def generate_explanations(
         risk.append("Transaction before 5 AM — late-night transactions have elevated fraud correlation")
     else:
         safe.append("Transaction during normal business hours")
-
+    
+  
+     
+    if txn_count_1h >= 5:
+     risk.append(
+        f"High velocity: {txn_count_1h} transactions within 1 hour"
+    )
+    elif txn_count_1h >= 3:
+     risk.append(
+        f"Increased hourly activity detected ({txn_count_1h} transactions)"
+    )
+    else:
+     safe.append(
+        f"Normal hourly behaviour ({txn_count_1h} transactions)"
+    )
+    
+    if time_since_last_txn < 120:
+     risk.append(
+        f"Rapid repeat transaction ({time_since_last_txn} sec gap)"
+    )
+    elif time_since_last_txn < 600:
+     risk.append(
+        f"Short transaction interval ({time_since_last_txn} sec)"
+    )
+    else:
+     safe.append(
+        f"Normal time gap between transactions"
+    )
+     
+    if is_proxy_ip == 1:
+     risk.append(
+        "VPN/Proxy network detected"
+    )
+    else:
+     safe.append(
+        "No VPN or proxy indicators"
+    )
     # ── Black Box Guarantee ──
     # If model scores >0.25 (Review threshold) but no risk rule fired
     if prob > 0.25 and len(risk) == 0:
@@ -255,7 +311,7 @@ async def process_payment(payment: PaymentRequest, request: Request):
     if not user_doc.exists:
         # Demo account — created on first payment attempt
         demo_country = get_location_from_ip(current_ip)
-        demo_created = (datetime.now() - timedelta(days=0)).isoformat()
+        demo_created = datetime.now().isoformat()
         user_data = {
             "email":           f"{payment.user_id}@demo.com",
             "last_ip":         None,
@@ -263,6 +319,7 @@ async def process_payment(payment: PaymentRequest, request: Request):
             "last_country":    None,
             "last_txn_time":   None,
             "txn_count_24h":   0,
+            "txn_count_1h":0,
             "created_at":      demo_created,
             "failed_attempts": 0,
             "avg_txn_amount":  0,
@@ -288,14 +345,30 @@ async def process_payment(payment: PaymentRequest, request: Request):
     )
 
     last_txn_time = user_data.get("last_txn_time")
+
     if last_txn_time:
-        last_txn = datetime.fromisoformat(last_txn_time)
-        txn_count_24h = (
-            user_data.get("txn_count_24h", 0) + 1
-            if current_time - last_txn < timedelta(hours=24) else 1
-        )
+     last_txn = datetime.fromisoformat(last_txn_time)
+
+     txn_count_24h = (
+        user_data.get("txn_count_24h",0)+1
+        if current_time-last_txn < timedelta(hours=24)
+        else 1
+    )
+
+     txn_count_1h = (
+        user_data.get("txn_count_1h",0)+1
+        if current_time-last_txn < timedelta(hours=1)
+        else 1
+    )
+
+     time_since_last_txn = int(
+        (current_time-last_txn).total_seconds()
+    )
+
     else:
-        txn_count_24h = 1
+     txn_count_24h = 1
+     txn_count_1h = 1
+     time_since_last_txn = 9999
 
     created = user_data.get("created_at")
     account_age_days = (
@@ -308,30 +381,53 @@ async def process_payment(payment: PaymentRequest, request: Request):
     prev_avg   = float(user_data.get("avg_txn_amount",0))
     prev_count = int(user_data.get("total_txn_count",0))
 
-    if prev_count == 0:
-     avg_txn_amount = payment.amount
-    else:
-     avg_txn_amount = prev_avg
+    
+    avg_txn_amount = prev_avg if prev_count > 0 else payment.amount
 
-    amount_deviation = round(payment.amount / max(avg_txn_amount,1),4)
+    amount_deviation = round(
+payment.amount / avg_txn_amount if avg_txn_amount>0 else 1,
+4
+)
 
     is_international = 1 if detected_country not in ("Demo Mode", "India") else 0
-
+    is_proxy_ip = 1 if (
+is_mal_ip == 1 and
+is_international == 1 and
+location_change == 1
+) else 0
     ml_input = {
-        "amount":           float(payment.amount),
-        "amount_deviation": float(amount_deviation),
-        "is_mal_ip":        int(is_mal_ip),
-        "is_new_device":    int(is_new_device),
-        "odd_time":         int(odd_time),
-        "txn_count_24h":    int(txn_count_24h),
-        "account_age_days": int(account_age_days),
-        "failed_attempts":  int(failed_attempts),
-        "location_change":  int(location_change),
-        "avg_txn_amount":   float(avg_txn_amount),
-        "is_international": int(is_international)
-    }
 
-    df   = pd.DataFrame([ml_input])
+"amount":float(payment.amount),
+
+"avg_txn_amount":float(avg_txn_amount),
+
+"amount_deviation":float(amount_deviation),
+
+"txn_count_24h":int(txn_count_24h),
+
+"txn_count_1h":int(txn_count_1h),
+
+"time_since_last_txn":int(time_since_last_txn),
+
+"account_age_days":int(account_age_days),
+
+"failed_attempts":int(failed_attempts),
+
+"location_change":int(location_change),
+
+"is_international":int(is_international),
+
+"is_mal_ip":int(is_mal_ip),
+
+"is_proxy_ip":int(is_proxy_ip),
+
+"is_new_device":int(is_new_device),
+
+"odd_time":int(odd_time)
+
+}
+
+    df = pd.DataFrame([ml_input])[model.feature_names_in_]
     prob = float(model.predict_proba(df)[0][1])
     probability_formatted = f"{prob * 100:.2f}"
 
@@ -360,22 +456,44 @@ async def process_payment(payment: PaymentRequest, request: Request):
         risk_level = "High"
 
     risk, safe = generate_explanations(
-        amount=payment.amount,
-        avg_txn_amount=avg_txn_amount,
-        amount_deviation=amount_deviation,
-        is_mal_ip=is_mal_ip,
-        is_new_device=is_new_device,
-        location_change=location_change,
-        is_international=is_international,
-        odd_time=odd_time,
-        txn_count_24h=txn_count_24h,
-        account_age_days=account_age_days,
-        failed_attempts=failed_attempts,
-        detected_country=detected_country,
-        current_ip=current_ip,
-        prob=prob,
-        txn_type=payment.txn_type
-    )
+
+amount=payment.amount,
+
+avg_txn_amount=avg_txn_amount,
+
+amount_deviation=amount_deviation,
+
+is_mal_ip=is_mal_ip,
+
+is_new_device=is_new_device,
+
+location_change=location_change,
+
+is_international=is_international,
+
+odd_time=odd_time,
+
+txn_count_24h=txn_count_24h,
+
+txn_count_1h=txn_count_1h,
+
+time_since_last_txn=time_since_last_txn,
+
+account_age_days=account_age_days,
+
+failed_attempts=failed_attempts,
+
+is_proxy_ip=is_proxy_ip,
+
+detected_country=detected_country,
+
+current_ip=current_ip,
+
+prob=prob,
+
+txn_type=payment.txn_type
+
+)
 
     print(f"\n--- FINSHIELD INFERENCE LOG ---")
     print(f"Features:     {ml_input}")
@@ -413,24 +531,40 @@ async def process_payment(payment: PaymentRequest, request: Request):
     if prediction == "Normal":
         # Approved: update full profile including trusted IP/device/location
         user_ref.update({
-            "last_ip":         current_ip,
-            "last_device":     current_device,
-            "last_country":    detected_country,
-            "last_txn_time":   current_time.isoformat(),
-            "txn_count_24h":   txn_count_24h,
-            "avg_txn_amount":  round(new_avg, 2),
-            "total_txn_count": new_count
-        })
+
+"last_ip":current_ip,
+
+"last_device":current_device,
+
+"last_country":detected_country,
+
+"last_txn_time":current_time.isoformat(),
+
+"txn_count_24h":txn_count_24h,
+
+"txn_count_1h":txn_count_1h,
+
+"avg_txn_amount":round(new_avg,2),
+
+"total_txn_count":new_count
+
+})
     else:
         # Review or Blocked: update only counters, NOT trust profile.
         # last_ip, last_device, last_country remain as they were.
         # avg_txn_amount is NOT updated — fraud amount does not
         # inflate the baseline spending average.
         user_ref.update({
-            "last_txn_time":   current_time.isoformat(),
-            "txn_count_24h":   txn_count_24h,
-            "total_txn_count": new_count
-        })
+
+"last_txn_time":current_time.isoformat(),
+
+"txn_count_24h":txn_count_24h,
+
+"txn_count_1h":txn_count_1h,
+
+"total_txn_count":new_count
+
+})
 
     return {
         "prediction":  prediction,
@@ -441,16 +575,32 @@ async def process_payment(payment: PaymentRequest, request: Request):
         "safe_factors": safe,
         "detected_ip":  current_ip,
         "feature_values": {
-            "IP Address":         current_ip,
-            "Country":            detected_country,
-            "Device":             current_device,
-            "Time":               current_time.strftime("%H:%M:%S"),
-            "Amount":             f"₹{payment.amount:.2f}",
-            "Amount Deviation":   f"{amount_deviation:.2f}×",
-            "Txn count 24h":      str(txn_count_24h),
-            "Account age (days)": str(account_age_days),
-            "Failed attempts":    str(failed_attempts)
-        }
+
+"IP Address":current_ip,
+
+"Country":detected_country,
+
+"Device":current_device,
+
+"Time":current_time.strftime("%H:%M:%S"),
+
+"Amount":f"₹{payment.amount:.2f}",
+
+"Amount Deviation":f"{amount_deviation:.2f}×",
+
+"Txn count 24h":str(txn_count_24h),
+
+"Txn count 1h":str(txn_count_1h),
+
+"Time since last txn":str(time_since_last_txn)+" sec",
+
+"Proxy detected":"Yes" if is_proxy_ip else "No",
+
+"Account age (days)":str(account_age_days),
+
+"Failed attempts":str(failed_attempts)
+
+}
     }
 
 
@@ -470,7 +620,8 @@ async def register_user(data: RegisterUser):
         "created_at":      datetime.now().isoformat(),
         "failed_attempts": 0,
         "avg_txn_amount":  0,
-        "total_txn_count": 0
+        "total_txn_count": 0,
+        "txn_count_1h":0,
     },merge=True)
     return {"success": True}
 

@@ -36,7 +36,13 @@ print(f"Fraud rate: {data['label'].mean()*100:.2f}%")
 # ══════════════════════════════════════════════════════════════════
 
 data['amount_deviation'] = (data['amount'] / data['avg_txn_amount']).round(4)
+data['avg_txn_amount']=data['avg_txn_amount'].replace(0,1)
+data['txn_count_1h'] = data['txn_count_1h'].fillna(0)
 
+data['time_since_last_txn'] = data['time_since_last_txn'].fillna(9999)
+
+data['is_proxy_ip'] = data['is_proxy_ip'].fillna(0)
+data=data.replace([np.inf,-np.inf],0)
 print("\namount_deviation stats:")
 print(f"  Fraud mean:  {data[data['label']==1]['amount_deviation'].mean():.3f}")
 print(f"  Normal mean: {data[data['label']==0]['amount_deviation'].mean():.3f}")
@@ -85,17 +91,35 @@ for col in stat_cols:
 
 # FIX: amount_deviation is now included
 FEATURES = [
-    "amount",
-    "amount_deviation",   # FIX: added — judges spend relative to user baseline
-    "is_mal_ip",
-    "is_new_device",
-    "odd_time",
-    "txn_count_24h",
-    "account_age_days",
-    "failed_attempts",
-    "location_change",
-    "avg_txn_amount",
-    "is_international"
+
+"amount",
+
+"avg_txn_amount",
+
+"amount_deviation",
+
+"txn_count_24h",
+
+"txn_count_1h",
+
+"time_since_last_txn",
+
+"account_age_days",
+
+"failed_attempts",
+
+"location_change",
+
+"is_international",
+
+"is_mal_ip",
+
+"is_proxy_ip",
+
+"is_new_device",
+
+"odd_time"
+
 ]
 
 X = data[FEATURES]
