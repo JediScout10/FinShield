@@ -305,12 +305,15 @@ async def process_payment(payment: PaymentRequest, request: Request):
     failed_attempts = user_data.get("failed_attempts", 0)
 
     # avg_txn_amount: use stored value, or current amount if no history
-    prev_avg   = user_data.get("avg_txn_amount", 0) or 0
-    prev_count = user_data.get("total_txn_count", 0) or 0
-    avg_txn_amount = prev_avg if prev_count > 0 else payment.amount
+    prev_avg   = float(user_data.get("avg_txn_amount",0))
+    prev_count = int(user_data.get("total_txn_count",0))
 
-    # amount_deviation: must use identical formula as train_model.py
-    amount_deviation = round(payment.amount / avg_txn_amount, 4)
+    if prev_count == 0:
+     avg_txn_amount = payment.amount
+    else:
+     avg_txn_amount = prev_avg
+
+    amount_deviation = round(payment.amount / max(avg_txn_amount,1),4)
 
     is_international = 1 if detected_country not in ("Demo Mode", "India") else 0
 
@@ -402,7 +405,10 @@ async def process_payment(payment: PaymentRequest, request: Request):
     # baseline trust profile of an account.
     # ══════════════════════════════════════════════════════════════
     new_count = prev_count + 1
-    new_avg   = ((prev_avg * prev_count) + payment.amount) / new_count
+    if prev_count == 0:
+     new_avg = payment.amount
+    else:
+      new_avg = ((prev_avg * prev_count) + payment.amount) / new_count
 
     if prediction == "Normal":
         # Approved: update full profile including trusted IP/device/location
@@ -465,7 +471,7 @@ async def register_user(data: RegisterUser):
         "failed_attempts": 0,
         "avg_txn_amount":  0,
         "total_txn_count": 0
-    })
+    },merge=True)
     return {"success": True}
 
 
