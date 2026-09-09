@@ -66,21 +66,52 @@ def get_real_ip(request: Request) -> str:
     return request.client.host
 
 
-def get_location_from_ip(ip: str) -> str:
+def get_network_info(ip: str) -> dict:
+    """
+    Returns {"country": str, "isp": str}.
+    ISP is used instead of raw IP for trust decisions — raw IPs change
+    constantly (wifi <-> mobile data) even for the same legitimate user,
+    but the ISP/network they're on is far more stable.
+    """
     if ip in ("127.0.0.1", "localhost", "0.0.0.0"):
-        return "Demo Mode"
+        return {"country": "Demo Mode", "isp": "Demo Mode"}
     try:
         req = urllib.request.Request(
-            f"http://ip-api.com/json/{ip}",
+            f"http://ip-api.com/json/{ip}?fields=status,country,isp",
             headers={"User-Agent": "FinShield/1.0"}
         )
         with urllib.request.urlopen(req, timeout=3) as resp:
             data = json.loads(resp.read().decode())
             if data.get("status") == "success":
-                return data.get("country", "Demo Mode")
+                return {
+                    "country": data.get("country", "Demo Mode"),
+                    "isp": data.get("isp", "Unknown ISP"),
+                }
     except Exception:
         pass
-    return "Demo Mode"
+    return {"country": "Demo Mode", "isp": "Demo Mode"}
+
+
+def update_trust_map(known_map: dict, key: str, cap: int = 5) -> dict:
+    """
+    Increments the seen-count for `key` in a frequency-based trust map
+    (used for known ISPs, devices, and countries). Caps the map at
+    `cap` entries so the Firestore doc doesn't grow unbounded — when
+    full, evicts the least-frequently-seen entry to make room, unless
+    the new key would be the least frequent itself.
+    """
+    if key in known_map:
+        known_map[key] += 1
+        return known_map
+    if len(known_map) < cap:
+        known_map[key] = 1
+        return known_map
+    # Map is full — evict the least-seen entry to make room
+    least_seen_key = min(known_map, key=known_map.get)
+    if known_map[least_seen_key] <= 1:
+        del known_map[least_seen_key]
+        known_map[key] = 1
+    return known_map
 
 
 def generate_explanations(
@@ -169,14 +200,14 @@ def generate_explanations(
     else:
         safe.append("No failed authentication attempts — clean login history")
 
-    # ── 4. IP Change ──
+    # ── 4. Network/ISP Change ──
     if is_mal_ip:
         risk.append(
-            f"IP address changed from last known location — "
-            f"current IP ({current_ip}) does not match account history"
+            f"Unrecognised network — this connection's ISP hasn't been "
+            f"seen on this account before (current IP: {current_ip})"
         )
     else:
-        safe.append(f"Transaction from trusted IP address ({current_ip})")
+        safe.append(f"Transaction from a previously trusted network ({current_ip})")
 
     # ── 5. Account Age ──
     if account_age_days < 7:
@@ -193,9 +224,9 @@ def generate_explanations(
 
     # ── 6. Device Change ──
     if is_new_device:
-        risk.append("Unrecognised device: not previously associated with this account")
+        risk.append("Unrecognised device: not among this account's known devices")
     else:
-        safe.append("Transaction from a previously trusted device")
+        safe.append("Transaction from a device this account has used before")
 
     # ── 7. Location Change ──
     if location_change:
@@ -310,13 +341,16 @@ async def process_payment(payment: PaymentRequest, request: Request):
 
     if not user_doc.exists:
         # Demo account — created on first payment attempt
-        demo_country = get_location_from_ip(current_ip)
+        demo_network = get_network_info(current_ip)
         demo_created = datetime.now().isoformat()
         user_data = {
             "email":           f"{payment.user_id}@demo.com",
             "last_ip":         None,
             "last_device":     None,
             "last_country":    None,
+            "known_isps":      {},
+            "known_devices":   {},
+            "known_countries": {},
             "last_txn_time":   None,
             "txn_count_24h":   0,
             "txn_count_1h":0,
@@ -329,18 +363,31 @@ async def process_payment(payment: PaymentRequest, request: Request):
     else:
         user_data = user_doc.to_dict()
 
-    last_ip      = user_data.get("last_ip")
-    last_device  = user_data.get("last_device")
-    last_country = user_data.get("last_country")
+    # FIX: frequency-based trust instead of single-last-value comparison.
+    # The old logic only remembered the *one most recent* IP/device/country,
+    # so a user alternating between two legitimate networks or devices (e.g.
+    # wifi <-> mobile data) would get flagged on every other transaction,
+    # because each new one only ever got compared to the immediately
+    # preceding one, not to the account's actual history.
+    #
+    # known_isps / known_devices / known_countries are maps of
+    # {value: times_seen}, built up over all past Approved transactions.
+    # A network/device/country is now "trusted" if it has been seen at
+    # all before — not only if it happens to be the very last one used.
+    known_isps      = user_data.get("known_isps", {}) or {}
+    known_devices    = user_data.get("known_devices", {}) or {}
+    known_countries  = user_data.get("known_countries", {}) or {}
 
-    detected_country = get_location_from_ip(current_ip)
+    network_info      = get_network_info(current_ip)
+    detected_country  = network_info["country"]
+    current_isp       = network_info["isp"]
 
-    is_mal_ip = 1 if (last_ip and current_ip != last_ip) else 0
-    is_new_device = 1 if (last_device and current_device != last_device) else 0
+    is_mal_ip = 1 if (known_isps and current_isp not in known_isps) else 0
+    is_new_device = 1 if (known_devices and current_device not in known_devices) else 0
     location_change = (
-        1 if (last_country
+        1 if (known_countries
               and detected_country not in ("Demo Mode",)
-              and detected_country != last_country)
+              and detected_country not in known_countries)
         else 0
     )
 
@@ -529,7 +576,15 @@ txn_type=payment.txn_type
       new_avg = ((prev_avg * prev_count) + payment.amount) / new_count
 
     if prediction == "Normal":
-        # Approved: update full profile including trusted IP/device/location
+        # Approved: grow the frequency-based trust maps (not just overwrite
+        # a single last-seen value — see FIX note above). last_ip/last_device/
+        # last_country are still stored for display/debugging purposes only;
+        # they are no longer used for trust decisions.
+        known_isps = update_trust_map(known_isps, current_isp)
+        known_devices = update_trust_map(known_devices, current_device)
+        if detected_country != "Demo Mode":
+            known_countries = update_trust_map(known_countries, detected_country)
+
         user_ref.update({
 
 "last_ip":current_ip,
@@ -537,6 +592,12 @@ txn_type=payment.txn_type
 "last_device":current_device,
 
 "last_country":detected_country,
+
+"known_isps":known_isps,
+
+"known_devices":known_devices,
+
+"known_countries":known_countries,
 
 "last_txn_time":current_time.isoformat(),
 
@@ -615,6 +676,9 @@ async def register_user(data: RegisterUser):
         "last_ip":         None,
         "last_device":     None,
         "last_country":    None,
+        "known_isps":      {},
+        "known_devices":   {},
+        "known_countries": {},
         "last_txn_time":   None,
         "txn_count_24h":   0,
         "created_at":      datetime.now().isoformat(),
