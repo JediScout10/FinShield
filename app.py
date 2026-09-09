@@ -9,7 +9,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 
 from datetime import datetime, timedelta
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 import firebase_config
 import os
@@ -25,10 +25,22 @@ print(f"Fraud model loaded. Features: {list(model.feature_names_in_)}")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"]
+    # FIX: the frontend calls this API via same-origin relative paths
+    # (fetch('/payment'), fetch('/register-user'), etc.) — it never makes
+    # a cross-origin request in production, and never sends credentials.
+    # allow_origins=["*"] + allow_credentials=True was an unused, unsafe
+    # combination. This allowlist covers local dev only (uvicorn's default
+    # port and common frontend dev-server ports); add the production
+    # domain here if the frontend is ever served from a different origin.
+    allow_origins=[
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+    ],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
 config = firebase_config.FIREBASE_CONFIG
@@ -43,6 +55,30 @@ class PaymentRequest(BaseModel):
     amount: float
     device_fingerprint: str
     txn_type: str = "PAYMENT"
+
+    @field_validator("amount")
+    @classmethod
+    def amount_must_be_reasonable(cls, v):
+        if v <= 0:
+            raise ValueError("amount must be greater than 0")
+        if v > 10_000_000:  # ₹1 crore — sanity ceiling, not a business rule
+            raise ValueError("amount exceeds maximum allowed transaction size")
+        return round(v, 2)
+
+    @field_validator("user_id", "device_fingerprint")
+    @classmethod
+    def field_must_not_be_blank(cls, v):
+        if not v or not v.strip():
+            raise ValueError("field cannot be empty")
+        return v.strip()
+
+    @field_validator("txn_type")
+    @classmethod
+    def txn_type_must_be_known(cls, v):
+        allowed = {"PAYMENT", "TRANSFER", "CASH_OUT"}
+        if v not in allowed:
+            raise ValueError(f"txn_type must be one of {allowed}")
+        return v
 
 
 class RegisterUser(BaseModel):
