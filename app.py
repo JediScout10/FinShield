@@ -343,6 +343,41 @@ def generate_explanations(
      safe.append(
         "No VPN or proxy indicators"
     )
+    # ── Combined-Signal Detection ──
+    # Research on real fraud systems shows combinations of signals matter
+    # more than any single one in isolation (e.g. a new network alone is
+    # often just someone switching from wifi to mobile data — but a new
+    # network AND a new device on the same transaction is a much stronger
+    # indicator than either alone). The Random Forest model already learns
+    # these interactions internally through its tree splits, so this block
+    # does NOT change the model's score — it only makes an interaction the
+    # model may already be using visible to a human reading the output,
+    # which plain feature-by-feature explanations don't surface on their own.
+    identity_signals_fired = sum([is_mal_ip, is_new_device, location_change])
+    if identity_signals_fired >= 2:
+        fired_names = []
+        if is_mal_ip:
+            fired_names.append("unrecognised network")
+        if is_new_device:
+            fired_names.append("unrecognised device")
+        if location_change:
+            fired_names.append("new country")
+        risk.append(
+            f"Multiple identity signals together: {', '.join(fired_names)} — "
+            f"this combination is a stronger indicator than any one alone"
+        )
+
+    if identity_signals_fired >= 1 and (amount_deviation >= 2.0 or odd_time):
+        context_names = []
+        if amount_deviation >= 2.0:
+            context_names.append(f"amount {amount_deviation:.1f}× above average")
+        if odd_time:
+            context_names.append("unusual hour")
+        risk.append(
+            f"Unrecognised identity signal combined with {', '.join(context_names)} — "
+            f"pattern consistent with account takeover attempts"
+        )
+
     # ── Black Box Guarantee ──
     # If model scores >0.25 (Review threshold) but no risk rule fired
     if prob > 0.25 and len(risk) == 0:
